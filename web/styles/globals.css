@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light;
+  --surface-1: #fcfcfb;
+  --page-plane: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  /* method colors -- same validated 5-slot categorical palette used
+     throughout this project's Python-generated dashboards */
+  --m-equal_weight: #2a78d6;
+  --m-inverse_beta: #eb6834;
+  --m-risk_parity: #1baf7a;
+  --m-min_variance: #eda100;
+  --m-max_sharpe: #e87ba4;
+  --m-hrp: #4a3aa7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page-plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --good: #0ca30c;
+    --critical: #e66767;
+    --m-equal_weight: #3987e5;
+    --m-inverse_beta: #d95926;
+    --m-risk_parity: #199e70;
+    --m-min_variance: #c98500;
+    --m-max_sharpe: #d55181;
+    --m-hrp: #9085e9;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+}

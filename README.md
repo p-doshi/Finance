@@ -18,6 +18,11 @@ exactly what to buy or sell" — a human reads that and enters it manually.
 **Live dashboard (beta/trend + risk-parity/Markowitz charts):**
 https://claude.ai/artifact/P2j9A38vV7haiYe3AiCS3w
 
+**Live portfolio simulator** (real backtest history + real-time quotes,
+Next.js, deployable to Vercel): [web/](web/) — see
+[web/README.md](web/README.md) for local dev and deployment. Not yet
+deployed; needs your own free Vercel account for the final step.
+
 **Full methodology, data sources, assumption checks, and results:**
 [docs/methodology.md](docs/methodology.md)
 
@@ -125,7 +130,10 @@ free at alpaca.markets, export two API key environment variables, and
 Everything else — Phases 0-4, the market-wide screener, and the full
 research-priority list (shrinkage, HRP, Sortino/Calmar/VaR/CVaR,
 tearsheets, IC validation, DSR/PBO, Black-Litterman, Fama-French) — is
-done. See [§ 12 Roadmap](docs/methodology.md#12-roadmap).
+done. The live simulator (`web/`, above) is documented in
+[§ 12](docs/methodology.md#12-live-portfolio-simulator-web).
+
+See [§ 13 Roadmap](docs/methodology.md#13-roadmap).
 
 ## Repo layout
 
@@ -154,8 +162,10 @@ scripts/
   generate_decision_ticket.py — real holdings -> whole-share trade ticket (Phase 3)
   generate_monitor_dashboard.py — status dashboard + drift alerts (Phase 4)
   scan_universe.py        — full US+Canada market scan + liquidity screen (Stage A)
+  export_web_data.py      — exports real backtest curves/weights for the web simulator
 docs/methodology.md       — data sources, assumptions tested, full results, roadmap
 results/                  — JSON output of the scripts above
+web/                      — Next.js live portfolio simulator (real backtest + live quotes), see web/README.md
 .github/workflows/ci.yml  — runs the test suite on every push
 ```
 

@@ -997,7 +997,50 @@ creating one requires the user's own signup. That step — sign up, export
 the two environment variables, run the script for real — is the one
 piece of this whole project that only the user can complete.
 
-## 12. Roadmap
+## 12. Live portfolio simulator (`web/`)
+
+A Next.js app, not part of the original roadmap — added on request for a
+live, interactive "watch the money grow" view, deployable to Vercel
+(a hosted web app, not another local script). Picking a weighting method
+and an investment amount shows a chart of the real walk-forward backtest
+equity curve (`scripts/export_web_data.py` exports exactly what
+`research.backtest.walk_forward` produced — the same numbers as §5, not
+a separate or prettier calculation) extended by one live point.
+
+**How the live point is computed, precisely, so it's checkable:** the
+strategy's final (most-recently-rebalanced) weights are frozen as of the
+backtest's data cutoff. A Vercel serverless function
+(`web/pages/api/quotes.js`) fetches real current prices from Yahoo
+Finance's chart API — the same endpoint already validated and used for
+Canadian tickers in `data/fetch_ca.py`, confirmed live during this
+session to return genuinely current prices, not stale ones (today's
+`regularMarketPrice`/`regularMarketTime`, checked directly before
+building on it). The live value is `last_backtest_value × Σ(weight_i ×
+live_price_i / last_known_price_i)` — a transparent extension of the
+historical curve using real price ratios against frozen weights, never a
+separately-fabricated number. Yahoo's multi-symbol quote endpoint
+(`v7/finance/quote`) now requires an API key — checked directly, got
+`"Unauthorized"` anonymously — so the app fetches each of the 12 tickers'
+chart endpoint individually and in parallel server-side instead.
+
+**Same execution boundary as everywhere else in this project:** this
+displays a simulated value. It never places an order, on Wealthsimple,
+Alpaca, or anywhere else, and says so directly in the page's own copy.
+
+**Verified locally before calling it done** (`npm run build` compiles
+clean; dev server tested end-to-end): live quotes populate correctly for
+all 12 tickers with real, correctly-signed day-change percentages; the
+chart renders the real historical curve with a distinct LIVE point and
+dashed connector; layout checked at both desktop and 390px-wide mobile
+viewports with no overflow.
+
+**Not yet deployed.** Putting this on Vercel needs the user's own free
+account — same category of constraint as the Alpaca paper-trading
+integration (§11): buildable and testable without it, but the actual
+"live at a public URL" step is the one thing only the user can do.
+`web/README.md` has both deployment paths (CLI or GitHub-connected).
+
+## 13. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
    data ingestion.
@@ -1021,7 +1064,7 @@ piece of this whole project that only the user can complete.
    against the real, verified API; needs the user's own free signup and
    API keys to actually run end-to-end. See §11.
 
-## 13. Reproducing this
+## 14. Reproducing this
 
 ```bash
 python3 -m venv .venv
@@ -1043,4 +1086,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
 .venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
 .venv/bin/python scripts/run_paper_trade_sync.py  # needs your own free Alpaca paper account + API keys
+.venv/bin/python scripts/export_web_data.py  # exports data for web/ (see web/README.md to run/deploy it)
 ```
