@@ -897,7 +897,28 @@ generating real SELL/BUY trades for positions that had drifted further
 since it wasn't real data and didn't belong sitting around as if it
 might be.
 
-## 10. Roadmap
+## 10. Phase 4 — real-time monitor
+
+`scripts/generate_monitor_dashboard.py` → `results/monitor_dashboard.html`.
+"Real-time" means what it realistically can for a local-first project
+with no hosted backend: a dashboard regenerated from the latest data on
+disk each time the script runs (the same convention the quantstats
+tearsheets already use), not a continuously-live served page. Shows
+current price and today's change per name, current weight vs. a freshly
+recomputed risk-parity target (a bar plus a target-weight tick mark), and
+a clear alert banner naming every position outside the drift band — green
+"all clear" when nothing needs attention, red naming names when something
+does. Read-only, same execution boundary as the rest of this project:
+it's a status page, not an order, and says so in its own header.
+
+Checked visually (rendered headless, screenshotted) against both the
+all-zero template (sensibly shows every name "outside the band" since
+nonzero targets vs. zero holdings is a real, if trivial, drift) and
+sample holdings (correctly flagged JNJ/PG/XOM/ENB/UL/ASML while leaving
+NVDA/KO/WMT/VZ/RY/NVO alone) — the same sample data used to check Phase 3,
+again removed afterward rather than left sitting in the repo.
+
+## 11. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
    data ingestion.
@@ -912,13 +933,15 @@ might be.
 4. **Decision layer** (done) — compares manually-entered current holdings
    against target weights, outputs a trade ticket in whole shares,
    cash-constrained, with its own drift band. See §9.
-5. **Real-time monitor** — live prices/risk on a dashboard; alert fires when
-   drift crosses threshold. Rebalancing decisions themselves stay periodic
-   (weekly/monthly), not continuous.
+5. **Real-time monitor** (done) — a regenerate-on-demand dashboard
+   (current prices, current vs. target weight, a drift-band alert
+   banner). "Real-time" scoped honestly to what a local-first project
+   without a hosted backend can actually be. See §10.
 6. **Paper-trade validation + write-up** — run in parallel against a free
    Alpaca/IBKR paper account before trusting it for manual real trades.
+   Last item left on the original roadmap.
 
-## 11. Reproducing this
+## 12. Reproducing this
 
 ```bash
 python3 -m venv .venv
@@ -938,4 +961,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression
 .venv/bin/python scripts/run_risk_managed_backtest.py  # Phase 2: caps, rebalance band, vol targeting
 .venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
+.venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
 ```

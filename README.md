@@ -67,7 +67,18 @@ trade ticket, cash-constrained, its own drift band. Still submits
 nothing, same execution boundary as always. See
 [§ 9](docs/methodology.md#9-phase-3--decision-layer).
 
-Remaining phases/stages are scoped in [§ 10 Roadmap](docs/methodology.md#10-roadmap).
+**Phase 4 (real-time monitor) also done** — a regenerate-on-demand status
+dashboard (current prices, current vs. target weight, a drift-band alert
+banner), scoped honestly to what a local-first project without a hosted
+backend can actually be. See
+[§ 10](docs/methodology.md#10-phase-4--real-time-monitor).
+
+Only one item left on the original roadmap: paper-trade validation
+against a free broker account before trusting any of this for manual real
+trades. Everything else — Phases 0-4, the market-wide screener, and the
+full research-priority list (shrinkage, HRP, Sortino/Calmar/VaR/CVaR,
+tearsheets, IC validation, DSR/PBO, Black-Litterman, Fama-French) — is
+done. See [§ 11 Roadmap](docs/methodology.md#11-roadmap).
 
 ## Repo layout
 
@@ -92,6 +103,8 @@ scripts/
   run_portfolio.py        — in-sample risk-parity / Markowitz run (Phase 0)
   run_backtest.py         — walk-forward, out-of-sample backtest (Phase 1)
   generate_tearsheet.py   — quantstats HTML tearsheet per method (results/tearsheet_*.html)
+  generate_decision_ticket.py — real holdings -> whole-share trade ticket (Phase 3)
+  generate_monitor_dashboard.py — status dashboard + drift alerts (Phase 4)
   scan_universe.py        — full US+Canada market scan + liquidity screen (Stage A)
 docs/methodology.md       — data sources, assumptions tested, full results, roadmap
 results/                  — JSON output of the scripts above
@@ -115,4 +128,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression (real published factors)
 .venv/bin/python scripts/run_risk_managed_backtest.py  # position caps, rebalance band, vol targeting
 .venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
+.venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
 ```

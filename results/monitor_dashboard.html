@@ -1,0 +1,186 @@
+<title>Portfolio Monitor</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page-plane: #f9f9f7; --text-primary: #0b0b0b;
+    --text-secondary: #52514e; --muted: #898781; --grid: #e1e0d9; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --good: #0ca30c; --critical: #d03b3b; --warn-bg: #fff8e6; --warn-border: #eda100;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page-plane: #0d0d0d; --text-primary: #ffffff;
+      --text-secondary: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --good: #0ca30c; --critical: #e66767; --warn-bg: #2a2410; --warn-border: #c98500;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page-plane: #0d0d0d; --text-primary: #ffffff;
+    --text-secondary: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --good: #0ca30c; --critical: #e66767; --warn-bg: #2a2410; --warn-border: #c98500;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--page-plane); margin: 0; }
+  .viz-root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--page-plane);
+    color: var(--text-primary); padding: 20px 16px 40px; max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 650; margin: 0 0 4px; }
+  .meta { color: var(--text-secondary); font-size: 12px; margin: 0 0 16px; }
+  .summary { display: flex; gap: 24px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .stat .value { font-size: 20px; font-weight: 650; }
+  .banner { background: var(--surface-1); border: 1px solid var(--good); color: var(--good);
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .banner:not(.ok):not(.warn) { border-color: var(--critical); color: var(--critical); }
+  .banner.warn { border-color: var(--warn-border); color: var(--warn-border); background: var(--warn-bg); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px; }
+  .row { display: grid; grid-template-columns: 56px 110px 1fr 110px 60px; align-items: center;
+    gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--grid); font-size: 13px; }
+  .row:last-child { border-bottom: none; }
+  .row.alert { background: var(--warn-bg); margin: 0 -16px; padding: 10px 16px; border-radius: 6px; }
+  .ticker { font-weight: 650; }
+  .price { font-variant-numeric: tabular-nums; color: var(--text-secondary); font-size: 12px; }
+  .chg.up { color: var(--good); } .chg.down { color: var(--critical); }
+  .bar-track { position: relative; height: 10px; background: var(--grid); border-radius: 5px; }
+  .bar-cur { position: absolute; left: 0; top: 0; bottom: 0; background: var(--series-1); border-radius: 5px; }
+  .bar-tgt-marker { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-primary); }
+  .weights { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .drift { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .alert-text { color: var(--critical); }
+  @media (max-width: 480px) { .row { grid-template-columns: 44px 1fr 70px; } .price, .weights { display: none; } }
+</style>
+<div class="viz-root">
+  <h1>Portfolio Monitor</h1>
+  <p class="meta">Generated 2026-10-16 13:57 UTC from the latest price data on disk. Read-only — submits nothing.</p>
+  <div class="banner warn">Using portfolio_state.example.json (all zeros) — copy to portfolio_state.json with real holdings for a real monitor.</div>
+  <div class="summary">
+    <div class="stat"><div class="label">Total value</div><div class="value">$0.00</div></div>
+    <div class="stat"><div class="label">Cash</div><div class="value">$0.00</div></div>
+  </div>
+  <div class="banner">⚠ 12 name(s) outside the 2% drift band: NVDA, JNJ, KO, PG, WMT, VZ, XOM, RY, ENB, UL, NVO, ASML — consider running generate_decision_ticket.py</div>
+  <div class="card">
+        <div class="row alert">
+          <div class="ticker">NVDA ⚠</div>
+          <div class="price">$217.47 <span class="chg down">-1.7%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:6.2%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 6.2% target</span></div>
+          <div class="drift alert-text">-6.2pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">JNJ ⚠</div>
+          <div class="price">$253.81 <span class="chg down">-0.0%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:10.6%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 10.6% target</span></div>
+          <div class="drift alert-text">-10.6pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">KO ⚠</div>
+          <div class="price">$91.99 <span class="chg up">+0.2%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:10.2%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 10.2% target</span></div>
+          <div class="drift alert-text">-10.2pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">PG ⚠</div>
+          <div class="price">$157.15 <span class="chg up">+0.4%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:9.2%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 9.2% target</span></div>
+          <div class="drift alert-text">-9.2pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">WMT ⚠</div>
+          <div class="price">$118.03 <span class="chg up">+1.6%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:7.9%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 7.9% target</span></div>
+          <div class="drift alert-text">-7.9pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">VZ ⚠</div>
+          <div class="price">$44.38 <span class="chg down">-0.1%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:8.8%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 8.8% target</span></div>
+          <div class="drift alert-text">-8.8pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">XOM ⚠</div>
+          <div class="price">$173.85 <span class="chg down">-1.8%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:10.0%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 10.0% target</span></div>
+          <div class="drift alert-text">-10.0pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">RY ⚠</div>
+          <div class="price">$196.77 <span class="chg up">+1.5%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:9.0%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 9.0% target</span></div>
+          <div class="drift alert-text">-9.0pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">ENB ⚠</div>
+          <div class="price">$46.79 <span class="chg down">-1.2%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:9.5%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 9.5% target</span></div>
+          <div class="drift alert-text">-9.5pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">UL ⚠</div>
+          <div class="price">$64.61 <span class="chg up">+1.2%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:8.2%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 8.2% target</span></div>
+          <div class="drift alert-text">-8.2pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">NVO ⚠</div>
+          <div class="price">$39.41 <span class="chg up">+3.4%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:4.8%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 4.8% target</span></div>
+          <div class="drift alert-text">-4.8pp</div>
+        </div>
+        <div class="row alert">
+          <div class="ticker">ASML ⚠</div>
+          <div class="price">$1,657.82 <span class="chg up">+0.5%</span></div>
+          <div class="bars">
+            <div class="bar-track"><div class="bar-cur" style="width:0.0%"></div>
+            <div class="bar-tgt-marker" style="left:5.7%"></div></div>
+          </div>
+          <div class="weights">0.0% <span class="muted">/ 5.7% target</span></div>
+          <div class="drift alert-text">-5.7pp</div>
+        </div>
+  </div>
+  <p class="meta" style="margin-top:14px;">Bar = current weight; vertical mark = target weight (fresh risk-parity, same 3-year window as the rest of this project). Run scripts/generate_decision_ticket.py for an actual trade ticket.</p>
+</div>
