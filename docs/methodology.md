@@ -862,7 +862,42 @@ each period's ex-ante vol estimate rather than fully re-simulating a
 cash/risky rebalancing with its own transaction costs — directionally
 right, not a precision instrument.
 
-## 9. Roadmap
+## 9. Phase 3 — decision layer
+
+`decision/trade_ticket.py`, `scripts/generate_decision_ticket.py`:
+compares real holdings (entered by hand in `portfolio_state.json` —
+gitignored, never committed, since real account data is personal
+financial information; `portfolio_state.example.json` is the tracked
+template) against freshly-recomputed risk-parity target weights, and
+prints a whole-share trade ticket. **Still submits nothing, same
+execution boundary as §0** — this is the layer that ends at "here's
+exactly what to enter manually," not a step closer to automation.
+
+Handles three real constraints a naive version wouldn't:
+
+- **Whole shares only, floored, never rounded up** — ASML alone is
+  ~$1,658/share in this watchlist, so target weights never translate to
+  exact fractional dollar amounts; flooring means the ticket never
+  assumes more cash than the target actually implies.
+- **Cash-constrained buys** — if the naive target-implied buys would
+  cost more than the account's cash plus this ticket's own sell
+  proceeds, every buy is scaled down proportionally rather than
+  producing a ticket the account can't actually afford. Tested directly
+  (`tests/test_trade_ticket.py::test_generate_trade_ticket_scales_down_buys_when_cash_insufficient`
+  and the zero-affordability edge case).
+- **A drift band on the trade decision itself** (default 2% of total
+  portfolio value) — the same noise-suppression idea as Phase 2's
+  `drift_band`, applied here to whether a trade is worth entering at
+  all, not just whether to re-estimate the target.
+
+Checked end-to-end against sample (not real) holdings: correctly left
+positions within ~1-2pp of target alone (NVDA, WMT, VZ, NVO) while
+generating real SELL/BUY trades for positions that had drifted further
+(JNJ +16.0pp, PG -9.2pp, ASML -5.7pp) — removed from the repo afterward,
+since it wasn't real data and didn't belong sitting around as if it
+might be.
+
+## 10. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
    data ingestion.
@@ -874,22 +909,21 @@ right, not a precision instrument.
 3. **Risk management layer** (done) — position caps, volatility targeting,
    rebalance bands. Found and fixed a real turnover-calculation bug along
    the way. See §8.
-4. **Decision layer** — compares manually-entered current holdings against
-   target weights, outputs a trade ticket in whole shares. (No safe
-   programmatic read path into Wealthsimple either, by the same ToS/IIROC
-   constraint — holdings are entered by hand.)
+4. **Decision layer** (done) — compares manually-entered current holdings
+   against target weights, outputs a trade ticket in whole shares,
+   cash-constrained, with its own drift band. See §9.
 5. **Real-time monitor** — live prices/risk on a dashboard; alert fires when
    drift crosses threshold. Rebalancing decisions themselves stay periodic
    (weekly/monthly), not continuous.
 6. **Paper-trade validation + write-up** — run in parallel against a free
    Alpaca/IBKR paper account before trusting it for manual real trades.
 
-## 10. Reproducing this
+## 11. Reproducing this
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m pytest -q              # 34 tests, pure math + synthetic data, no network
+.venv/bin/python -m pytest -q              # 146 tests, pure math + synthetic data, no network
 .venv/bin/python scripts/fetch_prices.py   # pulls + validates 5y history, needs network
 .venv/bin/python scripts/inverse_beta.py
 .venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample weights
@@ -898,4 +932,10 @@ python3 -m venv .venv
 .venv/bin/python scripts/fetch_universe_history.py  # Stage B data: ~40min, resumable
 .venv/bin/python scripts/rank_universe.py  # Stage B: momentum ranking
 .venv/bin/python scripts/build_large_portfolio.py  # Stage C: shrinkage-vs-sample comparison
+.venv/bin/python scripts/validate_ranker_ic.py  # IC validation of the momentum ranker
+.venv/bin/python scripts/validate_overfitting.py  # Deflated Sharpe Ratio + PBO
+.venv/bin/python scripts/run_black_litterman.py  # market-implied returns + one illustrative view
+.venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression
+.venv/bin/python scripts/run_risk_managed_backtest.py  # Phase 2: caps, rebalance band, vol targeting
+.venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
 ```

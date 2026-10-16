@@ -1,0 +1,19 @@
+{
+  "_comment": "TEMPLATE -- copy to portfolio_state.json (gitignored, never committed) and fill in your real holdings and cash balance from your Wealthsimple account. Share counts are whole shares; cash is in CAD or USD matching whatever currency you track your account in -- this project doesn't do currency conversion.",
+  "as_of": "YYYY-MM-DD",
+  "cash": 0.00,
+  "positions": {
+    "NVDA": 0,
+    "JNJ": 0,
+    "KO": 0,
+    "PG": 0,
+    "WMT": 0,
+    "VZ": 0,
+    "XOM": 0,
+    "RY": 0,
+    "ENB": 0,
+    "UL": 0,
+    "NVO": 0,
+    "ASML": 0
+  }
+}

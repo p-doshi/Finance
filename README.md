@@ -60,7 +60,14 @@ band also found and fixed a turnover-calculation bug (every previously
 reported turnover figure had been understated) — see
 [§ 8](docs/methodology.md#8-phase-2--risk-management-layer).
 
-Remaining phases/stages are scoped in [§ 9 Roadmap](docs/methodology.md#9-roadmap).
+**Phase 3 (decision layer) also done** — real holdings (entered by hand,
+`portfolio_state.json`, gitignored — never committed, it's personal
+financial data) compared against fresh risk-parity targets, whole-share
+trade ticket, cash-constrained, its own drift band. Still submits
+nothing, same execution boundary as always. See
+[§ 9](docs/methodology.md#9-phase-3--decision-layer).
+
+Remaining phases/stages are scoped in [§ 10 Roadmap](docs/methodology.md#10-roadmap).
 
 ## Repo layout
 
@@ -77,6 +84,7 @@ src/portfolio_pipeline/
   research/overfitting.py — Deflated Sharpe Ratio + Probability of Backtest Overfitting
   research/ic_analysis.py — Information Coefficient validation of a ranking signal
   risk/controls.py        — position caps, volatility targeting
+  decision/trade_ticket.py — real holdings vs. target weights -> whole-share trade ticket
 tests/                    — pytest: optimizer math, data validation, no-lookahead, universe dedup
 scripts/
   fetch_prices.py         — pulls + validates 5y daily history for the watchlist
@@ -95,7 +103,7 @@ results/                  — JSON output of the scripts above
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m pytest -q              # 34 tests, no network needed
+.venv/bin/python -m pytest -q              # 146 tests, no network needed
 .venv/bin/python scripts/fetch_prices.py   # needs network; pulls 5y history for the watchlist
 .venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample
 .venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample
@@ -106,4 +114,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_black_litterman.py  # market-implied returns + one illustrative view
 .venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression (real published factors)
 .venv/bin/python scripts/run_risk_managed_backtest.py  # position caps, rebalance band, vol targeting
+.venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
 ```

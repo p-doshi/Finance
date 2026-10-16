@@ -8,3 +8,7 @@ data/raw/
 data/*.json
 data/factors/
 !data/.gitkeep
+
+# Real account holdings are personal financial data -- never committed.
+# portfolio_state.example.json (a template, not real data) stays tracked.
+portfolio_state.json
