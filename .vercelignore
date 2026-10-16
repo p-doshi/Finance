@@ -1,0 +1,10 @@
+.venv
+web/node_modules
+.git
+data/raw
+data/factors
+results
+*.pyc
+__pycache__
+.pytest_cache
+.coverage

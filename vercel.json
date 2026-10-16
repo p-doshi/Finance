@@ -10,7 +10,8 @@
     },
     "app": {
       "root": ".",
-      "runtime": "python"
+      "runtime": "python",
+      "entrypoint": "app.py"
     }
   },
   "rewrites": [
