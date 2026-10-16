@@ -91,4 +91,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/validate_ranker_ic.py  # IC validation of the momentum ranker
 .venv/bin/python scripts/validate_overfitting.py  # Deflated Sharpe Ratio + PBO on the 5-method comparison
 .venv/bin/python scripts/run_black_litterman.py  # market-implied returns + one illustrative view
+.venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression (real published factors)
 ```

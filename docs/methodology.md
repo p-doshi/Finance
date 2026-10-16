@@ -734,6 +734,66 @@ from +18.8% to +28.4% (+9.56pp) and ASML's from +51.3% to +42.1%
 ripple effects through their correlations with the rest of the group, not
 an opaque reshuffling of the whole return vector.
 
+### Fama-French factor regression (`data/fetch_factors.py`, `research/factor_model.py`)
+
+Fama & French's 3-factor (market, size SMB, value HML — *J. Financial
+Economics*, 1993) and 5-factor (adds profitability RMW, investment CMA —
+*J. Financial Economics* 116(1), 2015) models, regressed against the
+12-stock watchlist's real excess returns. Factors are **Kenneth French's
+own published daily series** (Dartmouth Tuck Data Library), fetched
+directly rather than reconstructed — this project has no book-to-market,
+profitability, or investment data to build SMB/HML/RMW/CMA from scratch,
+and regressing against the published series is standard practice, not a
+shortcut. The OLS itself is hand-implemented (no statsmodels dependency
+at runtime) and **cross-checked against `statsmodels.OLS` directly** —
+coefficients, standard errors, t-stats, and R² all matched to 1e-10,
+continuing the practice that caught the max_drawdown bug via quantstats.
+
+**Results (3-year window, real data, run live):**
+
+| Ticker | Ann. alpha (FF3) | Mkt-RF β | SMB β | HML β | R² |
+|---|---|---|---|---|---|
+| NVDA | +38.9% | 1.88 | -0.64 | -1.23 | 0.55 |
+| ASML | +15.6% | 1.65 | -0.08 | -0.46 | 0.40 |
+| RY | +18.7%* | 0.67 | 0.08 | 0.36 | 0.38 |
+| XOM | +2.2% | 0.42 | -0.20 | 0.78 | 0.15 |
+| VZ | +13.9% | 0.18 | -0.24 | 0.56 | 0.07 |
+| NVO | -25.9% | 0.76 | 0.04 | -0.22 | 0.09 |
+| JNJ, KO, PG, WMT, ENB, UL | +4% to +16% | 0.1–0.4 | small | 0.1–0.4 | 0.02–0.11 |
+
+*(full 12-name, both-model table: `results/factor_analysis.json`)*
+
+**The loadings tell real, checkable stories, not arbitrary numbers:**
+NVDA and ASML load heavily negative on HML (-1.23, -0.46) — textbook
+growth-stock behavior, the opposite of a value tilt, exactly consistent
+with their high P/E ratios (27.5x, 53.8x, Stage A data) and their dominant
+market-cap-weighted role in the Black-Litterman section above. XOM and VZ
+load solidly positive on HML (0.78, 0.56) — value-stock behavior,
+consistent with having two of the three lowest P/E ratios in the group
+(22.5x, 11.6x). NVO's -25.9% annualized alpha lines up with the
+-30.17% 52-week decline already documented in §2 (GLP-1 competition) — the
+factor model isn't just re-deriving beta, it's attributing *how much* of
+each stock's return the market/size/value factors jointly fail to
+explain. R² itself is informative: NVDA/ASML/RY (0.55/0.40/0.38) are
+mostly explained by systematic factors; JNJ/UL/PG (0.02-0.08) are mostly
+idiosyncratic — consistent with being the steadiest, least market-driven
+names in the group (Phase 0's low-beta cluster).
+
+**RY's alpha is the only one significant at p<0.05 in both the 3- and
+5-factor models (+18.7%, +18.3%) — and this is exactly where the Deflated
+Sharpe Ratio section's lesson applies again, not just to portfolio
+selection.** Testing 12 names and finding one "significant" result at the
+5% level is close to the base rate pure luck would produce testing 12
+independent hypotheses (expected false positives ≈ 12 × 0.05 = 0.6, so
+finding ~1 isn't surprising on its own) — reported plainly rather than as
+a discovery, and flagged in the script's own output, not hidden in a
+footnote.
+
+**Data-availability caveat, not a bug:** French's data lags "today" by
+the source's own update cadence (through 2026-08-31 as of this project's
+October 2026 data, a ~6-week lag) — inherent to the source, not a fetch
+failure.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
