@@ -1,192 +1,114 @@
 # Portfolio Pipeline
 
-Two related tracks: (1) a risk-aware portfolio construction and monitoring
-pipeline for a 12-stock watchlist (NVDA, JNJ, KO, PG, WMT, VZ, XOM, RY, ENB,
-UL, NVO, ASML), built to be used against a real Wealthsimple account, and
-(2) a full US + Canada market screener — which stocks are performing well
-or badly across the ~8,000+ listed names, independent of that watchlist.
-Both built to hold up as a serious research project, not just a personal
-dashboard.
+[![CI](https://github.com/p-doshi/portfolio-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/p-doshi/portfolio-pipeline/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
-**Execution boundary, by design:** this pipeline computes target weights and
-trade tickets. It never submits an order anywhere. Wealthsimple Trade's terms
-of service prohibit API-based order submission (and actively detect it), and
-IIROC does not permit electronic order submission through an unofficial API
-for Canadian self-directed accounts. So the system's job ends at "here is
-exactly what to buy or sell" — a human reads that and enters it manually.
+A portfolio construction, backtesting, and risk-management engine for
+systematic equity strategies — the machinery a quant desk uses to decide
+*what* to hold and *how much*, pressure-tested for overfitting before you
+trust it, stopping at a trade ticket instead of touching your brokerage
+account.
 
-**Live dashboard (beta/trend + risk-parity/Markowitz charts):**
-https://claude.ai/artifact/P2j9A38vV7haiYe3AiCS3w
+Most retail portfolio tools show you a pie chart. This one builds the pie
+chart from real optimization (risk parity, Black-Litterman, Markowitz),
+checks whether the backtest behind it would survive a professional
+quant's objections (walk-forward validation, Deflated Sharpe Ratio,
+Probability of Backtest Overfitting), and manages risk the way a desk
+would (position caps, volatility targeting, rebalance bands) — without
+ever placing an order on your behalf.
 
-**Live portfolio simulator** (real backtest history + real-time quotes,
-Next.js, deployable to Vercel): [web/](web/) — see
-[web/README.md](web/README.md) for local dev and deployment. Not yet
-deployed; needs your own free Vercel account for the final step.
+**Who this is for:** systematic/quant traders who want to validate a
+strategy before risking capital; day traders who want risk controls
+instead of gut-feel position sizing; retail investors who want
+institutional portfolio construction without a Bloomberg terminal.
 
-**Full methodology, data sources, assumption checks, and results:**
-[docs/methodology.md](docs/methodology.md)
+## Features
 
-## Key findings
+**Portfolio construction**
+- Equal-Weight, Inverse-Beta, Risk Parity, Hierarchical Risk Parity (HRP),
+  Minimum-Variance, Max-Sharpe (Markowitz), and Black-Litterman
+- Ledoit-Wolf covariance shrinkage for universes where sample covariance
+  breaks down (more assets than observations)
+- Fama-French 3/5-factor regression for return attribution
 
-- **Overfitting, demonstrated rather than asserted.** The method that
-  looked best in-sample (max-Sharpe, Sharpe 2.14) was the *worst*
-  performer out-of-sample on every metric checked — return, Sortino,
-  Calmar, drawdown, CVaR ([§5](docs/methodology.md#5-phase-1--walk-forward-out-of-sample-backtest)).
-- **Deflated Sharpe Ratio and Probability of Backtest Overfitting,
-  applied, not just implemented.** DSR = 0.956 (clears the standard bar —
-  real skill likely exists somewhere in the 5-method comparison) while
-  PBO = 0.81–0.85 (picking *which* method is best doesn't transfer across
-  sub-samples). Not a contradiction — two different, correctly-reasoned-
-  through questions ([§7](docs/methodology.md#deflated-sharpe-ratio-and-probability-of-backtest-overfitting-researchoverfittingpy)).
-- **A momentum ranking signal validated and found wanting — reported
-  anyway.** Alphalens-style IC analysis on the 3,700-name screener found
-  no demonstrated forward-predictive skill (IC ≈ 0, sign-flipping across
-  horizons), stated plainly rather than left out. Run through the same
-  harness, a low-volatility signal instead came back consistently
-  positive at every horizon (+0.034/+0.021/+0.015) — still below
-  conventional significance at this sample size, but a real, differently-
-  shaped result that is itself evidence the harness works
-  ([§7](docs/methodology.md#information-coefficient-validation-of-the-stage-b-ranker--a-humbling-important-finding)).
-- **Three real bugs found by cross-checking against independent tools,
-  not by code review alone.** A `max_drawdown` bug (never anchored to
-  starting equity, understated every drawdown) found via quantstats,
-  matched to 9 decimal places after the fix. A turnover bug (computed
-  against stale targets, not actual drift) found building the rebalance
-  band. Two separate CDR data-quality bugs in the market scan — one by
-  prefix, one subtler one caught only because a reported market cap was
-  internally inconsistent with the real listing.
-- **Shrinkage and Hierarchical Risk Parity, checked at the exact point
-  they're supposed to matter.** At 300 assets vs. 199 observations,
-  sample covariance's condition number comes back as -1.26×10¹⁶
-  (mathematically singular); Ledoit-Wolf shrinkage keeps it at 137.9, and
-  HRP (which never inverts the covariance matrix) produces a valid
-  portfolio where matrix-inversion-based methods would hard-fail.
-- **A hand-implemented OLS factor regression cross-validated against
-  `statsmodels.OLS`** to 1e-10 precision, not just assumed correct.
-- **162 tests, 96% coverage, CI-gated lint, 15 commits** of incremental,
-  individually-documented work — not one large undifferentiated drop.
+**Backtesting & validation**
+- Walk-forward, out-of-sample engine — no lookahead, enforced by tests
+- Transaction costs, turnover tracking, configurable no-trade bands
+- Block-bootstrap confidence intervals instead of single-run point estimates
+- Deflated Sharpe Ratio and Probability of Backtest Overfitting (CSCV) —
+  the same corrections quant funds use before trusting a backtest
+- One-command [quantstats](https://github.com/ranaroussi/quantstats) HTML tearsheets
 
-## Architecture
+**Market screening**
+- Full US + Canada equity universe scan (8,000+ tickers) in two API calls
+- Liquidity/size filtering and momentum ranking
+- Information-Coefficient validation — checks whether a ranking signal
+  actually predicts forward returns before you trust it
 
-```
-Data layer → Research/backtest layer → Risk layer → Decision layer → Monitor/alert layer
-(validated,   (risk parity, Markowitz,  (position     (drift vs.       (live dashboard;
- point-in-     walk-forward backtest     limits, vol    target,         you execute the
- time pulls)   — Phase 1)                targeting)     trade ticket)   trade manually)
-```
+**Risk management**
+- Position concentration caps
+- Volatility targeting (no-margin, long-only)
+- Rebalance bands to cut unnecessary turnover
 
-Status: **Phases 0–1 complete** (12-stock track). Phase 1's walk-forward
-backtest found that the method which looked best in-sample (max-Sharpe) is
-the *worst* performer out-of-sample, and that no method is statistically
-distinguishable from the others given ~2 years of out-of-sample data — see
-[docs/methodology.md § 5](docs/methodology.md#5-phase-1--walk-forward-out-of-sample-backtest).
+**Execution — safe by design**
+- Generates whole-share trade tickets from real holdings vs. target
+  weights, for any brokerage, because it never calls a trading API
+- Optional Alpaca paper-trading integration (fake money) for pre-live validation
+- Regenerate-on-demand monitoring dashboard with drift alerts
 
-**Market-wide screener track: Stages A–B complete, and IC-validated.**
-8,356 US+Canada companies scanned, 3,954 survive a liquidity screen, 3,734
-(94%) ranked by momentum with 5 years of real daily history — see
-[docs/methodology.md § 6](docs/methodology.md#6-market-wide-screener-us--canada-all-listed-common-stocks)
-for the two data-source bugs found and fixed along the way, and the
-honest caveat that this ranking is pure momentum, not risk-adjusted.
-**Important finding from validating it (§7):** an Alphalens-style
-Information Coefficient study found this ranker shows no demonstrated
-forward-predictive skill at 1- or 3-month horizons (IC ≈ 0) — it's a real
-description of recent performance, not a shown buy signal. Reported
-because that's what the evidence says, not because it flatters the
-project.
-
-**Stage C (shrinkage vs. sample covariance) also done** — Ledoit-Wolf
-shrinkage keeps a 300-name portfolio's covariance matrix usable even where
-sample covariance mathematically breaks (more assets than observations);
-see [§ 7](docs/methodology.md#7-beyond-markowitz--benchmarking-against-real-tools-and-practice).
-
-**Phase 2 (risk management) also done** — position caps, a rebalance band,
-and volatility targeting, each with a measured real effect; building the
-band also found and fixed a turnover-calculation bug (every previously
-reported turnover figure had been understated) — see
-[§ 8](docs/methodology.md#8-phase-2--risk-management-layer).
-
-**Phase 3 (decision layer) also done** — real holdings (entered by hand,
-`portfolio_state.json`, gitignored — never committed, it's personal
-financial data) compared against fresh risk-parity targets, whole-share
-trade ticket, cash-constrained, its own drift band. Still submits
-nothing, same execution boundary as always. See
-[§ 9](docs/methodology.md#9-phase-3--decision-layer).
-
-**Phase 4 (real-time monitor) also done** — a regenerate-on-demand status
-dashboard (current prices, current vs. target weight, a drift-band alert
-banner), scoped honestly to what a local-first project without a hosted
-backend can actually be. See
-[§ 10](docs/methodology.md#10-phase-4--real-time-monitor).
-
-**Paper-trade validation (the last original roadmap item): code done,
-real run pending your own account.** An Alpaca paper-trading client
-(`execution/alpaca_paper.py`) is built and tested against Alpaca's real,
-verified API, hard-locked to the paper (fake-money) endpoint only — this
-is the one piece of the whole project that genuinely needs you: sign up
-free at alpaca.markets, export two API key environment variables, and
-`scripts/run_paper_trade_sync.py` does the rest. See
-[§ 11](docs/methodology.md#11-paper-trade-validation-the-last-original-roadmap-item--partially-done-honestly-scoped).
-
-Everything else — Phases 0-4, the market-wide screener, and the full
-research-priority list (shrinkage, HRP, Sortino/Calmar/VaR/CVaR,
-tearsheets, IC validation, DSR/PBO, Black-Litterman, Fama-French) — is
-done. The live simulator (`web/`, above) is documented in
-[§ 12](docs/methodology.md#12-live-portfolio-simulator-web).
-
-See [§ 13 Roadmap](docs/methodology.md#13-roadmap).
-
-## Repo layout
-
-```
-src/portfolio_pipeline/
-  data/fetch.py          — validated, point-in-time price ingestion for the watchlist
-  data/universe.py       — bulk US+Canada market snapshot (2 calls, ~8,000+ names)
-  research/optimizers.py — equal-weight, inverse-beta, risk parity, min-variance, max-Sharpe
-  research/hrp.py         — Hierarchical Risk Parity
-  research/covariance.py  — Ledoit-Wolf shrinkage
-  research/black_litterman.py — market-implied returns + view blending
-  research/factor_model.py — Fama-French factor regression (cross-checked vs statsmodels)
-  research/backtest.py   — walk-forward engine + block-bootstrap CIs + rebalance-band support
-  research/overfitting.py — Deflated Sharpe Ratio + Probability of Backtest Overfitting
-  research/ic_analysis.py — Information Coefficient validation of a ranking signal
-  risk/controls.py        — position caps, volatility targeting
-  decision/trade_ticket.py — real holdings vs. target weights -> whole-share trade ticket
-  execution/alpaca_paper.py — Alpaca paper-trading client (hard-locked to the fake-money endpoint)
-tests/                    — pytest: optimizer math, data validation, no-lookahead, universe dedup
-scripts/
-  fetch_prices.py         — pulls + validates 5y daily history for the watchlist
-  inverse_beta.py         — beta/52-week heuristic baseline
-  run_portfolio.py        — in-sample risk-parity / Markowitz run (Phase 0)
-  run_backtest.py         — walk-forward, out-of-sample backtest (Phase 1)
-  generate_tearsheet.py   — quantstats HTML tearsheet per method (results/tearsheet_*.html)
-  generate_decision_ticket.py — real holdings -> whole-share trade ticket (Phase 3)
-  generate_monitor_dashboard.py — status dashboard + drift alerts (Phase 4)
-  scan_universe.py        — full US+Canada market scan + liquidity screen (Stage A)
-  export_web_data.py      — exports real backtest curves/weights for the web simulator
-docs/methodology.md       — data sources, assumptions tested, full results, roadmap
-results/                  — JSON output of the scripts above
-web/                      — Next.js live portfolio simulator (real backtest + live quotes), see web/README.md
-.github/workflows/ci.yml  — runs the test suite on every push
-```
+**Live simulator**
+- A Next.js app (deployable to Vercel): pick a strategy and a dollar
+  amount, watch a real backtest equity curve extend with a live,
+  real-time market-data tail. See [web/](web/).
 
 ## Quickstart
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m pytest -q              # 157 tests, no network needed
-.venv/bin/python -m ruff check src/ tests/ scripts/  # lint (also runs in CI)
-.venv/bin/python scripts/fetch_prices.py   # needs network; pulls 5y history for the watchlist
-.venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample
-.venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample
-.venv/bin/python scripts/generate_tearsheet.py  # HTML tearsheets (results/tearsheet_*.html)
-.venv/bin/python scripts/scan_universe.py  # Stage A: full US+Canada market scan
-.venv/bin/python scripts/validate_ranker_ic.py  # IC validation of the momentum ranker
-.venv/bin/python scripts/validate_overfitting.py  # Deflated Sharpe Ratio + PBO on the 5-method comparison
-.venv/bin/python scripts/run_black_litterman.py  # market-implied returns + one illustrative view
-.venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression (real published factors)
-.venv/bin/python scripts/run_risk_managed_backtest.py  # position caps, rebalance band, vol targeting
-.venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
-.venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
-.venv/bin/python scripts/run_paper_trade_sync.py  # needs your own free Alpaca paper account + API keys
+git clone https://github.com/p-doshi/portfolio-pipeline
+cd portfolio-pipeline
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+python scripts/fetch_prices.py         # pull price history for your watchlist
+python scripts/run_backtest.py         # walk-forward backtest, all methods
+python scripts/generate_tearsheet.py   # HTML performance report
 ```
+
+Point it at your own tickers by editing the `TICKERS` list at the top of
+each script in `scripts/`.
+
+## Architecture
+
+```
+Data layer → Research/backtest layer → Risk layer → Decision layer → Monitor layer
+(validated,   (risk parity, Markowitz,  (position     (drift vs.       (live dashboard;
+ point-in-     walk-forward backtest,    limits, vol    target,         you execute the
+ time pulls)   factor models)            targeting)     trade ticket)   trade manually)
+```
+
+## Project layout
+
+```
+src/portfolio_pipeline/
+  data/            — price ingestion, universe scanning, Fama-French factors
+  research/        — optimizers, HRP, shrinkage, Black-Litterman, factor
+                      regression, backtesting, overfitting detection
+  risk/            — position caps, volatility targeting
+  decision/        — holdings vs. target weights -> trade ticket
+  execution/       — Alpaca paper-trading client
+tests/             — pytest, 96%+ coverage
+scripts/           — one script per capability above; see --help or the
+                      docstring at the top of each
+web/               — live simulator (Next.js, Vercel-ready)
+docs/methodology.md — full research methodology, data sources, and validation
+```
+
+## Documentation
+
+For data sources, every assumption tested, and the full validation
+record — see [docs/methodology.md](docs/methodology.md).
+
+## License
+
+[MIT](LICENSE)
