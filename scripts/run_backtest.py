@@ -88,17 +88,28 @@ def main():
     n_periods = len(next(iter(results.values())).period_returns)
     print(f"Out-of-sample holding periods: {n_periods} (~{n_periods / 12:.1f} years)\n")
 
-    print(f"{'Method':14}{'Ann.ret(net)':>14}{'Ann.vol':>10}{'Sharpe':>9}{'MaxDD':>9}{'AvgTurnover':>13}")
+    print(f"{'Method':14}{'Ann.ret(net)':>14}{'Ann.vol':>10}{'Sharpe':>9}{'Sortino':>9}{'Calmar':>8}{'MaxDD':>9}{'AvgTurnover':>13}")
     summary = {}
     for name, res in results.items():
         ann_ret = res.annualized_return(PERIODS_PER_YEAR)
         ann_vol = res.annualized_vol(PERIODS_PER_YEAR)
         sharpe = res.sharpe(RF, PERIODS_PER_YEAR)
+        sortino = res.sortino_ratio(RF, PERIODS_PER_YEAR)
+        calmar = res.calmar_ratio(PERIODS_PER_YEAR)
         mdd = res.max_drawdown()
         turn = res.avg_turnover()
+        var95 = res.historical_var(0.95)
+        cvar95 = res.cvar(0.95)
         summary[name] = {"ann_return_net": ann_ret, "ann_vol": ann_vol, "sharpe": sharpe,
-                          "max_drawdown": mdd, "avg_turnover": turn}
-        print(f"{name:14}{ann_ret*100:13.2f}%{ann_vol*100:9.2f}%{sharpe:9.2f}{mdd*100:8.2f}%{turn*100:12.1f}%")
+                          "sortino": sortino, "calmar": calmar,
+                          "max_drawdown": mdd, "avg_turnover": turn,
+                          "var_95": var95, "cvar_95": cvar95}
+        print(f"{name:14}{ann_ret*100:13.2f}%{ann_vol*100:9.2f}%{sharpe:9.2f}{sortino:9.2f}{calmar:8.2f}"
+              f"{mdd*100:8.2f}%{turn*100:12.1f}%")
+
+    print(f"\n--- Tail risk (single holding-period VaR/CVaR at 95%, {n_periods} periods — small-sample caveat applies) ---")
+    for name, res in results.items():
+        print(f"{name:14} VaR95={summary[name]['var_95']*100:6.2f}%  CVaR95={summary[name]['cvar_95']*100:6.2f}%")
 
     print(f"\n--- Block-bootstrap {90}% CIs (seed={BOOTSTRAP_SEED}, {n_periods} periods, block=3 months) ---")
     print("Small sample (one historical regime) — treat these as wide, honest uncertainty bands, not tight estimates.")

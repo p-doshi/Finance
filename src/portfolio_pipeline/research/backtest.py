@@ -59,6 +59,50 @@ class BacktestResult:
     def avg_turnover(self) -> float:
         return float(self.turnover.mean())
 
+    def sortino_ratio(self, rf: float, periods_per_year: float, mar: float = 0.0) -> float:
+        """Sortino & van der Meer (1991): like Sharpe, but the denominator
+        only counts downside deviation (returns below `mar`, the minimum
+        acceptable return — 0 by default, a common convention), so upside
+        volatility — which investors don't experience as risk — isn't
+        penalized the way plain Sharpe penalizes it. CFA Institute, "The
+        Sortino Ratio" (rpc.cfainstitute.org)."""
+        downside = np.minimum(self.net_period_returns - mar, 0.0)
+        downside_dev = np.sqrt(np.mean(downside ** 2)) * np.sqrt(periods_per_year)
+        ret = self.annualized_return(periods_per_year)
+        return (ret - rf) / downside_dev if downside_dev > 0 else float("nan")
+
+    def calmar_ratio(self, periods_per_year: float) -> float:
+        """Annualized return / |max drawdown| — standard definition, see
+        docs/methodology.md. Penalizes depth of loss specifically, unlike
+        Sharpe/Sortino which penalize dispersion of returns."""
+        mdd = self.max_drawdown()
+        ret = self.annualized_return(periods_per_year)
+        return ret / abs(mdd) if mdd != 0 else float("nan")
+
+    def historical_var(self, alpha: float = 0.95) -> float:
+        """Empirical (historical) VaR: the loss threshold not expected to
+        be exceeded with probability `alpha`, estimated directly from the
+        realized period-return distribution rather than assuming
+        normality — appropriate given every return series examined in
+        this project (§5) rejected normality. Reported as a negative
+        number (a loss), consistent with `max_drawdown`'s sign convention."""
+        return float(np.percentile(self.net_period_returns, 100 * (1 - alpha)))
+
+    def cvar(self, alpha: float = 0.95) -> float:
+        """Conditional VaR / Expected Shortfall: the average loss *given*
+        that the VaR threshold is breached. Preferred over VaR for
+        optimization/comparison because VaR isn't subadditive (it can
+        penalize diversification) while CVaR is a coherent risk measure.
+        With only a few dozen holding periods (see §5's small-sample
+        caveat), this is estimated from very few tail observations —
+        report it, but don't read more precision into it than a handful
+        of data points can support."""
+        var_threshold = self.historical_var(alpha)
+        tail = self.net_period_returns[self.net_period_returns <= var_threshold]
+        if len(tail) == 0:
+            return var_threshold
+        return float(tail.mean())
+
 
 def walk_forward(
     log_returns: pd.DataFrame,

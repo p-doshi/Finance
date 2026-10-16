@@ -511,6 +511,23 @@ fix, and its extra clustering machinery just adds turnover without buying
 anything. The benefit shows up exactly where the theory says it should
 (large N, poorly-conditioned covariance), not as a universal upgrade.
 
+### Sortino, Calmar, VaR, CVaR (`research/backtest.py`)
+
+Four metrics added to `BacktestResult`, each checked against a known
+hand-computed value in `tests/test_backtest_metrics.py` rather than just
+trusted: Sortino ratio (downside deviation only — doesn't penalize upside
+volatility the way Sharpe does), Calmar ratio (return / |max drawdown|),
+historical VaR and CVaR at 95% (empirical, not assumed-normal — appropriate
+given §5's finding that every return series here rejects normality; CVaR
+preferred for comparison since VaR isn't subadditive).
+
+Run on the existing Phase 1 backtest, these independently confirm the
+same finding from a different angle: max-Sharpe has by far the worst
+Calmar (1.63 vs. 3.4–3.5 for every other method) and worst CVaR95 (-5.51%
+vs. -4.0% to -4.9%) — the method that looked best in-sample is worst by
+risk-adjusted-return metrics its own optimization objective doesn't
+directly optimize for, not just by raw out-of-sample return.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
