@@ -73,12 +73,19 @@ banner), scoped honestly to what a local-first project without a hosted
 backend can actually be. See
 [§ 10](docs/methodology.md#10-phase-4--real-time-monitor).
 
-Only one item left on the original roadmap: paper-trade validation
-against a free broker account before trusting any of this for manual real
-trades. Everything else — Phases 0-4, the market-wide screener, and the
-full research-priority list (shrinkage, HRP, Sortino/Calmar/VaR/CVaR,
+**Paper-trade validation (the last original roadmap item): code done,
+real run pending your own account.** An Alpaca paper-trading client
+(`execution/alpaca_paper.py`) is built and tested against Alpaca's real,
+verified API, hard-locked to the paper (fake-money) endpoint only — this
+is the one piece of the whole project that genuinely needs you: sign up
+free at alpaca.markets, export two API key environment variables, and
+`scripts/run_paper_trade_sync.py` does the rest. See
+[§ 11](docs/methodology.md#11-paper-trade-validation-the-last-original-roadmap-item--partially-done-honestly-scoped).
+
+Everything else — Phases 0-4, the market-wide screener, and the full
+research-priority list (shrinkage, HRP, Sortino/Calmar/VaR/CVaR,
 tearsheets, IC validation, DSR/PBO, Black-Litterman, Fama-French) — is
-done. See [§ 11 Roadmap](docs/methodology.md#11-roadmap).
+done. See [§ 12 Roadmap](docs/methodology.md#12-roadmap).
 
 ## Repo layout
 
@@ -96,6 +103,7 @@ src/portfolio_pipeline/
   research/ic_analysis.py — Information Coefficient validation of a ranking signal
   risk/controls.py        — position caps, volatility targeting
   decision/trade_ticket.py — real holdings vs. target weights -> whole-share trade ticket
+  execution/alpaca_paper.py — Alpaca paper-trading client (hard-locked to the fake-money endpoint)
 tests/                    — pytest: optimizer math, data validation, no-lookahead, universe dedup
 scripts/
   fetch_prices.py         — pulls + validates 5y daily history for the watchlist
@@ -116,7 +124,7 @@ results/                  — JSON output of the scripts above
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m pytest -q              # 146 tests, no network needed
+.venv/bin/python -m pytest -q              # 157 tests, no network needed
 .venv/bin/python scripts/fetch_prices.py   # needs network; pulls 5y history for the watchlist
 .venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample
 .venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample
@@ -129,4 +137,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_risk_managed_backtest.py  # position caps, rebalance band, vol targeting
 .venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
 .venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
+.venv/bin/python scripts/run_paper_trade_sync.py  # needs your own free Alpaca paper account + API keys
 ```

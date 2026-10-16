@@ -918,7 +918,49 @@ sample holdings (correctly flagged JNJ/PG/XOM/ENB/UL/ASML while leaving
 NVDA/KO/WMT/VZ/RY/NVO alone) — the same sample data used to check Phase 3,
 again removed afterward rather than left sitting in the repo.
 
-## 11. Roadmap
+## 11. Paper-trade validation (the last original roadmap item) — partially done, honestly scoped
+
+This one needs something I cannot do on the user's behalf: an actual
+broker account. What's built instead is the integration code against
+Alpaca's real paper-trading API (fake money, free signup), ready for the
+user's own API keys — and this distinction matters, so it's stated
+plainly rather than glossed over as "done."
+
+`execution/alpaca_paper.py`: a client for Alpaca's Trading API, verified
+directly against Alpaca's current API documentation on 2026-10-16 (not
+assumed from memory) — `GET /v2/account`, `GET /v2/positions`,
+`POST /v2/orders`, exact field names (`cash`, `equity`, `buying_power`;
+`symbol`, `qty`, `market_value`; order body/response shape) all checked
+against the real docs before writing a line of client code.
+
+**Hard safety gate:** the client refuses to construct with any base URL
+other than Alpaca's paper endpoint — there is no parameter, flag, or
+environment variable anywhere in the file that can point it at live
+trading. This is a deliberate, narrow exception to this project's
+"decision support, never an order" design (§0): paper-trade validation
+specifically requires submitting orders somewhere, and Alpaca's fake-money
+paper account is the standard free way to do that without the Wealthsimple
+ToS/IIROC constraint ever coming into play, because nothing here is a real
+account.
+
+`scripts/run_paper_trade_sync.py`: pulls real account state (equity,
+cash, positions) from Alpaca, compares against fresh risk-parity targets,
+dry-runs by default, submits to the paper account only with an explicit
+`--execute` flag.
+
+**What's actually verified vs. not:** the client's request construction,
+response parsing, and error handling are tested with mocked HTTP
+responses matching the real, verified API shapes (11 tests). The
+graceful-missing-credentials path is checked directly, not just
+asserted — running the sync script with no API keys set prints clear
+setup instructions and exits cleanly (code 0), rather than crashing.
+**What is not verified:** an actual end-to-end run against a real Alpaca
+paper account, because no such account exists in this environment and
+creating one requires the user's own signup. That step — sign up, export
+the two environment variables, run the script for real — is the one
+piece of this whole project that only the user can complete.
+
+## 12. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
    data ingestion.
@@ -937,11 +979,12 @@ again removed afterward rather than left sitting in the repo.
    (current prices, current vs. target weight, a drift-band alert
    banner). "Real-time" scoped honestly to what a local-first project
    without a hosted backend can actually be. See §10.
-6. **Paper-trade validation + write-up** — run in parallel against a free
-   Alpaca/IBKR paper account before trusting it for manual real trades.
-   Last item left on the original roadmap.
+6. **Paper-trade validation + write-up** (code done, real run pending the
+   user's own account) — Alpaca paper-trading client built and tested
+   against the real, verified API; needs the user's own free signup and
+   API keys to actually run end-to-end. See §11.
 
-## 12. Reproducing this
+## 13. Reproducing this
 
 ```bash
 python3 -m venv .venv
@@ -962,4 +1005,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_risk_managed_backtest.py  # Phase 2: caps, rebalance band, vol targeting
 .venv/bin/python scripts/generate_decision_ticket.py  # Phase 3: real holdings -> whole-share trade ticket
 .venv/bin/python scripts/generate_monitor_dashboard.py  # Phase 4: status dashboard + drift alerts
+.venv/bin/python scripts/run_paper_trade_sync.py  # needs your own free Alpaca paper account + API keys
 ```
