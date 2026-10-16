@@ -35,8 +35,12 @@ https://claude.ai/artifact/P2j9A38vV7haiYe3AiCS3w
   through questions ([§7](docs/methodology.md#deflated-sharpe-ratio-and-probability-of-backtest-overfitting-researchoverfittingpy)).
 - **A momentum ranking signal validated and found wanting — reported
   anyway.** Alphalens-style IC analysis on the 3,700-name screener found
-  no demonstrated forward-predictive skill (IC ≈ 0 at 1–3mo horizons),
-  stated plainly in the docs and README rather than left out
+  no demonstrated forward-predictive skill (IC ≈ 0, sign-flipping across
+  horizons), stated plainly rather than left out. Run through the same
+  harness, a low-volatility signal instead came back consistently
+  positive at every horizon (+0.034/+0.021/+0.015) — still below
+  conventional significance at this sample size, but a real, differently-
+  shaped result that is itself evidence the harness works
   ([§7](docs/methodology.md#information-coefficient-validation-of-the-stage-b-ranker--a-humbling-important-finding)).
 - **Three real bugs found by cross-checking against independent tools,
   not by code review alone.** A `max_drawdown` bug (never anchored to

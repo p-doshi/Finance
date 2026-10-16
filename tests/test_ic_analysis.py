@@ -6,6 +6,7 @@ from portfolio_pipeline.research.ic_analysis import (
     composite_momentum_signal,
     forward_window_return,
     information_coefficient,
+    low_volatility_signal,
     run_ic_study,
     summarize_ic,
     trailing_window_return,
@@ -73,6 +74,62 @@ def test_composite_momentum_signal_matches_screen_module_logic():
         expected_ranks.append(raw.rank(pct=True) * 100)
     expected = pd.concat(expected_ranks, axis=1).mean(axis=1)
     pd.testing.assert_series_equal(signal.sort_index(), expected.sort_index(), check_names=False)
+
+
+def test_low_volatility_signal_ranks_lowest_vol_highest():
+    """Direct, known check: construct assets with clearly different,
+    constant per-asset volatility and confirm the lowest-vol asset gets
+    the highest signal rank (the signal is *negative* vol, ranked)."""
+    n_days = 300
+    idx = pd.bdate_range("2023-01-02", periods=n_days)
+    rng = np.random.default_rng(1)
+    data = {
+        "LOW_VOL": rng.normal(0, 0.002, n_days),
+        "MED_VOL": rng.normal(0, 0.01, n_days),
+        "HIGH_VOL": rng.normal(0, 0.03, n_days),
+    }
+    log_ret = pd.DataFrame(data, index=idx)
+    signal = low_volatility_signal(log_ret, as_of_idx=280, window=252)
+    assert signal["LOW_VOL"] > signal["MED_VOL"] > signal["HIGH_VOL"]
+
+
+def test_low_volatility_signal_nan_when_insufficient_history():
+    log_ret = _synthetic_log_returns(n_days=100)
+    signal = low_volatility_signal(log_ret, as_of_idx=50, window=252)
+    assert signal.isna().all()
+
+
+def test_low_volatility_signal_nan_with_gap_in_window():
+    log_ret = _synthetic_log_returns(n_days=400, n_assets=4)
+    log_ret.iloc[280, 1] = np.nan
+    signal = low_volatility_signal(log_ret, as_of_idx=300, window=252)
+    assert np.isnan(signal.iloc[1])
+    assert not np.isnan(signal.iloc[0])
+
+
+def test_run_ic_study_accepts_a_custom_signal_fn():
+    """The refactor's actual point: run_ic_study should work identically
+    with a different signal function plugged in, not just the default
+    momentum composite."""
+    log_ret = _synthetic_log_returns(n_days=600, n_assets=10, seed=63)
+    study = run_ic_study(log_ret, signal_fn=low_volatility_signal, horizon=21,
+                          snapshot_every=63, min_lookback=252)
+    assert len(study) > 0
+    assert "ic" in study.columns
+
+
+def test_run_ic_study_default_signal_fn_unchanged_by_refactor():
+    """Backward-compatibility check: calling without signal_fn must give
+    the exact same result as before the refactor (composite momentum)."""
+    log_ret = _synthetic_log_returns(n_days=600, n_assets=10, seed=64)
+    default_call = run_ic_study(log_ret, horizon=21, snapshot_every=63, min_lookback=252)
+
+    def explicit_momentum(lr, idx):
+        return composite_momentum_signal(lr, idx, (63, 126, 252))
+
+    explicit_call = run_ic_study(log_ret, signal_fn=explicit_momentum, horizon=21,
+                                  snapshot_every=63, min_lookback=252)
+    pd.testing.assert_frame_equal(default_call, explicit_call)
 
 
 def test_information_coefficient_perfect_rank_correlation():

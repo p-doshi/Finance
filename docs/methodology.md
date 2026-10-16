@@ -646,6 +646,43 @@ the top of that ranking as an actual buy list would be acting on an
 ordering that hasn't been shown to predict anything, which is exactly the
 distinction this section exists to make rather than leave implicit.
 
+### A second signal through the same harness: low volatility, not value
+
+Momentum coming up empty raises the obvious next question: does a
+*different* signal do better through the identical IC study? Value (P/E)
+isn't honestly testable here — this project's only P/E data is a single
+present-day snapshot (Stage A's market scan), and correlating today's P/E
+against *past* forward returns would be look-ahead bias, not a real IC
+study, so that signal is correctly off the table without point-in-time
+fundamentals history this project doesn't have. The well-documented
+**low-volatility anomaly** (Ang, Hodges, Xing & Zhang and others) has no
+such problem — it's computed purely from trailing price history, same as
+momentum, so it drops into the exact same no-lookahead harness
+(`research/ic_analysis.py`'s `low_volatility_signal`, reusing
+`run_ic_study`'s now-generalized `signal_fn` parameter).
+
+| Horizon | Mean IC | SE | t-stat |
+|---|---|---|---|
+| 1 month (21d) | +0.0344 | 0.0414 | +0.83 |
+| 3 month (63d) | +0.0214 | 0.0480 | +0.45 |
+| 6 month (126d) | +0.0147 | 0.0370 | +0.40 |
+
+**A genuinely different pattern from momentum's, worth stating carefully
+rather than oversold.** Every horizon comes back positive — unlike
+momentum's sign-flipping -0.0016 / -0.0068 / +0.0291 — and the 1-month IC
+(+0.034) is approaching, though still below, the practitioner "good"
+benchmark of 0.05. None of the three clear conventional statistical
+significance (all t-stats well under 2, the same small-sample limitation
+as everything else in this section: 14-16 quarterly snapshots). The
+honest read: this is *directionally encouraging* and consistent with
+real, independently-documented academic literature on low-volatility
+outperformance — not a validated, tradeable signal on this evidence
+alone. The difference from momentum's result is itself informative: the
+same harness, same universe, same horizons, produced a consistently
+signed result for one signal and a noisy, sign-flipping one for another —
+that contrast is a stronger piece of evidence that the harness is doing
+its job than either result alone would be.
+
 ### Deflated Sharpe Ratio and Probability of Backtest Overfitting (`research/overfitting.py`)
 
 Bailey & López de Prado's two corrections for exactly the situation this

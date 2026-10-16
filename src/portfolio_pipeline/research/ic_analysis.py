@@ -72,21 +72,46 @@ def information_coefficient(signal: pd.Series, forward_return: pd.Series) -> tup
     return float(ic), len(aligned)
 
 
+def low_volatility_signal(log_returns: pd.DataFrame, as_of_idx: int, window: int = 252) -> pd.Series:
+    """Percentile rank of *negative* trailing volatility — higher signal
+    value means lower realized vol, so it ranks the same direction as
+    `composite_momentum_signal` (higher = 'better' by this signal's logic).
+    Testable purely from price history, unlike a value signal (P/E): this
+    project's only P/E data is a single present-day snapshot (Stage A),
+    and testing it against *past* forward returns would be look-ahead
+    bias, not a legitimate IC study — there's no point-in-time P/E history
+    here to test that signal honestly. Low-vol has no such problem."""
+    start = as_of_idx - window + 1
+    if start < 0:
+        return pd.Series(np.nan, index=log_returns.columns)
+    vol = log_returns.iloc[start:as_of_idx + 1].std(skipna=False)
+    return (-vol).rank(pct=True, na_option="keep") * 100
+
+
 def run_ic_study(
-    log_returns: pd.DataFrame, *, signal_windows=(63, 126, 252), horizon: int = 21,
+    log_returns: pd.DataFrame, *, signal_fn=None, signal_windows=(63, 126, 252), horizon: int = 21,
     snapshot_every: int = 63, min_lookback: int = 252,
 ) -> pd.DataFrame:
     """Walks forward through `log_returns`' date index at `snapshot_every`-day
-    intervals (quarterly by default), computing the composite signal and
-    the realized forward return at each snapshot, strictly separated in
-    time (the signal at index i only uses data up to i; the forward return
-    only uses data after i) — the same no-lookahead discipline as
+    intervals (quarterly by default), computing a signal and the realized
+    forward return at each snapshot, strictly separated in time (the
+    signal at index i only uses data up to i; the forward return only
+    uses data after i) — the same no-lookahead discipline as
     `research.backtest.walk_forward`.
+
+    `signal_fn(log_returns, as_of_idx) -> pd.Series` defaults to
+    `composite_momentum_signal` (with `signal_windows`) if not given, so
+    existing callers are unaffected; pass e.g. `low_volatility_signal` to
+    test a different hypothesis through the same harness.
     """
+    if signal_fn is None:
+        def signal_fn(lr, idx):
+            return composite_momentum_signal(lr, idx, signal_windows)
+
     n = len(log_returns)
     rows = []
     for as_of_idx in range(min_lookback, n - horizon, snapshot_every):
-        signal = composite_momentum_signal(log_returns, as_of_idx, signal_windows)
+        signal = signal_fn(log_returns, as_of_idx)
         fwd = forward_window_return(log_returns, as_of_idx, horizon)
         ic, n_names = information_coefficient(signal, fwd)
         rows.append({"date": log_returns.index[as_of_idx], "ic": ic, "n_names": n_names})

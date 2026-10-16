@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_pipeline.research.ic_analysis import (
     composite_momentum_signal,
     forward_window_return,
+    low_volatility_signal,
     run_ic_study,
     summarize_ic,
 )
@@ -126,12 +127,29 @@ def main():
                      for i in range(len(decile_means) - 1))
     print(f"Monotonically increasing decile 1->10: {monotonic}")
 
+    # Momentum came up with no demonstrated skill (above) -- a natural next question is
+    # whether a DIFFERENT signal does better through the same harness. Value (P/E) isn't
+    # testable honestly here: this project's only P/E data is a single present-day
+    # snapshot (Stage A), and testing it against *past* forward returns would be
+    # look-ahead bias, not a real IC study. Low-volatility has no such problem -- it's
+    # computed purely from price history at each historical snapshot, same as momentum.
+    print("\n--- Low-volatility signal, same harness, same three horizons ---")
+    lowvol_summaries = {}
+    for h, label in [(21, "1mo"), (63, "3mo"), (126, "6mo")]:
+        s = run_ic_study(log_ret, signal_fn=low_volatility_signal, horizon=h,
+                          snapshot_every=SNAPSHOT_EVERY, min_lookback=MIN_LOOKBACK)
+        summ = summarize_ic(s)
+        lowvol_summaries[label] = summ
+        print(f"  {label:4} (horizon={h:3}d): mean_ic={summ['mean_ic']:+.4f}  "
+              f"se={summ['se_ic']:.4f}  t={summ['t_stat']:+.2f}  n_snapshots={summ['n_snapshots']}")
+
     RESULTS_DIR.mkdir(exist_ok=True)
     out = {
         "params": {"horizon": HORIZON, "snapshot_every": SNAPSHOT_EVERY, "min_lookback": MIN_LOOKBACK},
         "per_snapshot": study.assign(date=study["date"].astype(str)).to_dict(orient="records"),
         "summary": summary,
         "horizon_summaries": horizon_summaries,
+        "low_volatility_horizon_summaries": lowvol_summaries,
         "decile_means": {int(k): float(v) for k, v in decile_means.items()},
     }
     with open(RESULTS_DIR / "ic_validation.json", "w") as f:
