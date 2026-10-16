@@ -1,0 +1,149 @@
+{
+  "params": {
+    "window": 756,
+    "rebal_every": 21,
+    "cost_bps": 10.0,
+    "periods_per_year": 12.0,
+    "rf": 0.0426,
+    "bootstrap_seed": 20261015,
+    "n_periods": 24
+  },
+  "summary": {
+    "equal_weight": {
+      "ann_return_net": 0.15454180515289184,
+      "ann_vol": 0.10396353417956976,
+      "sharpe": 1.0767410519109684,
+      "max_drawdown": -0.04396831934281864,
+      "avg_turnover": 0.041666666666666664
+    },
+    "risk_parity": {
+      "ann_return_net": 0.14828187923824676,
+      "ann_vol": 0.09999305746162321,
+      "sharpe": 1.0568921675267995,
+      "max_drawdown": -0.04331784874457412,
+      "avg_turnover": 0.055579796637600494
+    },
+    "min_variance": {
+      "ann_return_net": 0.15817194340744095,
+      "ann_vol": 0.11437377394076395,
+      "sharpe": 1.0104759109137864,
+      "max_drawdown": -0.04615448668454736,
+      "avg_turnover": 0.1140943550625187
+    },
+    "max_sharpe": {
+      "ann_return_net": 0.11698029641070294,
+      "ann_vol": 0.10187260219148064,
+      "sharpe": 0.7301305239155184,
+      "max_drawdown": -0.07180202923965795,
+      "avg_turnover": 0.2888943185558202
+    }
+  },
+  "bootstrap_ci": {
+    "equal_weight": {
+      "ann_return_point": 0.15511922039724987,
+      "ann_return_ci": [
+        0.07786265629981753,
+        0.3169104715378945
+      ],
+      "sharpe_ci": [
+        0.8382255437093918,
+        3.407576250159504
+      ],
+      "n_periods": 24,
+      "n_boot": 2000,
+      "block_size": 3,
+      "seed": 20261015
+    },
+    "risk_parity": {
+      "ann_return_point": 0.1490479899714885,
+      "ann_return_ci": [
+        0.07537195922228229,
+        0.3003643650488645
+      ],
+      "sharpe_ci": [
+        0.8440791740944299,
+        3.4791924372071006
+      ],
+      "n_periods": 24,
+      "n_boot": 2000,
+      "block_size": 3,
+      "seed": 20261015
+    },
+    "min_variance": {
+      "ann_return_point": 0.15975871998428606,
+      "ann_return_ci": [
+        0.07954695539342742,
+        0.3240419946691067
+      ],
+      "sharpe_ci": [
+        0.733572937267438,
+        3.2790624919916946
+      ],
+      "n_periods": 24,
+      "n_boot": 2000,
+      "block_size": 3,
+      "seed": 20261015
+    },
+    "max_sharpe": {
+      "ann_return_point": 0.12085928737539081,
+      "ann_return_ci": [
+        0.015907479828712854,
+        0.292616054446405
+      ],
+      "sharpe_ci": [
+        0.16370682212549525,
+        3.6825059325226803
+      ],
+      "n_periods": 24,
+      "n_boot": 2000,
+      "block_size": 3,
+      "seed": 20261015
+    }
+  },
+  "window_sensitivity": {
+    "2y": {
+      "equal_weight": {
+        "ann_return_net": 0.24626047782609936,
+        "sharpe": 1.8978744197090744,
+        "n_periods": 36
+      },
+      "risk_parity": {
+        "ann_return_net": 0.22660080959767387,
+        "sharpe": 1.9195990833986434,
+        "n_periods": 36
+      },
+      "min_variance": {
+        "ann_return_net": 0.21531240986717412,
+        "sharpe": 1.7475057120733253,
+        "n_periods": 36
+      },
+      "max_sharpe": {
+        "ann_return_net": 0.26955217998036357,
+        "sharpe": 1.4760889604983753,
+        "n_periods": 36
+      }
+    },
+    "3y": {
+      "equal_weight": {
+        "ann_return_net": 0.15454180515289184,
+        "sharpe": 1.0767410519109684,
+        "n_periods": 24
+      },
+      "risk_parity": {
+        "ann_return_net": 0.14828187923824676,
+        "sharpe": 1.0568921675267995,
+        "n_periods": 24
+      },
+      "min_variance": {
+        "ann_return_net": 0.15817194340744095,
+        "sharpe": 1.0104759109137864,
+        "n_periods": 24
+      },
+      "max_sharpe": {
+        "ann_return_net": 0.11698029641070294,
+        "sharpe": 0.7301305239155184,
+        "n_periods": 24
+      }
+    }
+  }
+}

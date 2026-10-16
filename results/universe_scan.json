@@ -1,0 +1,473 @@
+{
+  "full_universe_count": 8356,
+  "by_country": {
+    "US": 5612,
+    "CA": 2744
+  },
+  "by_exchange": {
+    "US": 5612,
+    "TSX": 511,
+    "TSXV": 1548,
+    "CSE": 685
+  },
+  "screened_count": 3954,
+  "screen_params": {
+    "min_market_cap": 100000000,
+    "min_dollar_volume": 500000
+  },
+  "sector_counts": {
+    "Semiconductors": 59,
+    "Consumer Electronics": 6,
+    "Internet Content & Information": 42,
+    "Software - Infrastructure": 122,
+    "Internet Retail": 23,
+    "Aerospace & Defense": 80,
+    "Auto Manufacturers": 15,
+    "Insurance - Diversified": 11,
+    "Drug Manufacturers - General": 17,
+    "Discount Stores": 10,
+    "Banks - Diversified": 21,
+    "Credit Services": 40,
+    "Oil & Gas Integrated": 17,
+    "Semiconductor Equipment & Materials": 28,
+    "Communication Equipment": 33,
+    "Beverages - Non-Alcoholic": 13,
+    "Healthcare Plans": 11,
+    "Household & Personal Products": 20,
+    "Farm & Heavy Construction Machinery": 20,
+    "Tobacco": 6,
+    "Home Improvement Retail": 4,
+    "Entertainment": 35,
+    "Computer Hardware": 26,
+    "Capital Markets": 57,
+    "Other": 1,
+    "Software - Application": 151,
+    "Diagnostics & Research": 34,
+    "Specialty Industrial Machinery": 62,
+    "Specialty Chemicals": 51,
+    "Information Technology Services": 51,
+    "Other Industrial Metals & Mining": 69,
+    "Electronic Components": 31,
+    "Telecom Services": 45,
+    "Asset Management": 105,
+    "Medical Devices": 77,
+    "Restaurants": 39,
+    "Railroads": 10,
+    "Copper": 16,
+    "Oil & Gas Exploration & Production": 87,
+    "REIT - Healthcare Facilities": 18,
+    "Utilities - Regulated Electric": 42,
+    "Beverages - Brewers": 6,
+    "Apparel Retail": 24,
+    "Medical Instruments & Supplies": 36,
+    "Insurance - Property & Casualty": 44,
+    "Oil & Gas Refining & Marketing": 16,
+    "Biotechnology": 328,
+    "Financial Data & Stock Exchanges": 12,
+    "Travel Services": 14,
+    "REIT - Industrial": 19,
+    "Banks - Regional": 275,
+    "Gold": 70,
+    "Medical Distribution": 4,
+    "Oil & Gas Midstream": 53,
+    "Medical Care Facilities": 39,
+    "Building Products & Equipment": 27,
+    "Lodging": 9,
+    "REIT - Specialty": 17,
+    "Utilities - Independent Power Producers": 10,
+    "Engineering & Construction": 40,
+    "Advertising Agencies": 16,
+    "Waste Management": 13,
+    "Insurance Brokers": 15,
+    "Conglomerates": 19,
+    "Specialty Business Services": 33,
+    "Integrated Freight & Logistics": 15,
+    "Electrical Equipment & Parts": 30,
+    "Electronic Gaming & Multimedia": 6,
+    "Confectioners": 4,
+    "REIT - Retail": 33,
+    "Insurance - Life": 18,
+    "Oil & Gas Equipment & Services": 46,
+    "Auto Parts": 46,
+    "Auto & Truck Dealerships": 17,
+    "Rental & Leasing Services": 20,
+    "Drug Manufacturers - Specialty & Generic": 57,
+    "Industrial Distribution": 25,
+    "Scientific & Technical Instruments": 18,
+    "Steel": 18,
+    "Footwear & Accessories": 12,
+    "Building Materials": 14,
+    "Utilities - Diversified": 8,
+    "Beverages - Wineries & Distilleries": 4,
+    "Airlines": 21,
+    "Health Information Services": 27,
+    "Shell Companies": 48,
+    "REIT - Residential": 23,
+    "Food Distribution": 7,
+    "Farm Products": 11,
+    "Financial Conglomerates": 5,
+    "Real Estate Services": 22,
+    "Residential Construction": 18,
+    "Trucking": 14,
+    "Grocery Stores": 15,
+    "Uranium": 13,
+    "Agricultural Inputs": 9,
+    "Mortgage Finance": 13,
+    "Specialty Retail": 34,
+    "Utilities - Regulated Gas": 16,
+    "Packaged Foods": 46,
+    "Furnishings, Fixtures & Appliances": 17,
+    "Utilities - Regulated Water": 11,
+    "REIT - Diversified": 15,
+    "Metal Fabrication": 14,
+    "Resorts & Casinos": 13,
+    "Pollution & Treatment Controls": 7,
+    "Consulting Services": 10,
+    "Luxury Goods": 6,
+    "Apparel Manufacturing": 16,
+    "Packaging & Containers": 23,
+    "Chemicals": 13,
+    "Electronics & Computer Distribution": 7,
+    "Utilities - Renewable": 12,
+    "Solar": 10,
+    "Tools & Accessories": 9,
+    "Leisure": 19,
+    "Insurance - Reinsurance": 6,
+    "REIT - Hotel & Motel": 13,
+    "Personal Services": 8,
+    "REIT - Mortgage": 28,
+    "Security & Protection Services": 10,
+    "Gambling": 7,
+    "Airports & Air Services": 7,
+    "Publishing": 5,
+    "Aluminum": 4,
+    "Insurance - Specialty": 15,
+    "REIT - Office": 17,
+    "Department Stores": 4,
+    "Other Precious Metals & Mining": 23,
+    "Paper & Paper Products": 3,
+    "Education & Training Services": 18,
+    "Silver": 8,
+    "Marine Shipping": 25,
+    "Lumber & Wood Production": 7,
+    "Oil & Gas Drilling": 13,
+    "Broadcasting": 8,
+    "Coking Coal": 4,
+    "Thermal Coal": 4,
+    "Recreational Vehicles": 10,
+    "Real Estate - Development": 6,
+    "Staffing & Employment Services": 9,
+    "Real Estate - Diversified": 2,
+    "Business Equipment & Supplies": 4,
+    "Infrastructure Operations": 1,
+    "Textile Manufacturing": 1,
+    "Pharmaceutical Retailers": 1,
+    "Agricultural Farm Products": 1
+  },
+  "top_gainers": [
+    {
+      "ticker": "IAM",
+      "exchange": "US",
+      "name": "Iambic Therapeutics, Inc.",
+      "day_change_pct": 113.43,
+      "market_cap": 896349052
+    },
+    {
+      "ticker": "XLAB",
+      "exchange": "US",
+      "name": "Exascale Labs Holdings Inc.",
+      "day_change_pct": 49.7,
+      "market_cap": 124032000
+    },
+    {
+      "ticker": "UCFI",
+      "exchange": "US",
+      "name": "CN Healthy Food Tech Group Corp.",
+      "day_change_pct": 34.719,
+      "market_cap": 287814850
+    },
+    {
+      "ticker": "BETR",
+      "exchange": "US",
+      "name": "Better Home & Finance Holding Company",
+      "day_change_pct": 32.51,
+      "market_cap": 204424710
+    },
+    {
+      "ticker": "INDP",
+      "exchange": "US",
+      "name": "Indaptus Therapeutics, Inc.",
+      "day_change_pct": 28.96,
+      "market_cap": 379740623
+    },
+    {
+      "ticker": "AMT",
+      "exchange": "TSXV",
+      "name": "AmeriTrust Financial Technologies Inc.",
+      "day_change_pct": 25,
+      "market_cap": 229272111
+    },
+    {
+      "ticker": "HUMA",
+      "exchange": "US",
+      "name": "Humacyte, Inc.",
+      "day_change_pct": 24.12,
+      "market_cap": 122092267
+    },
+    {
+      "ticker": "BAFN",
+      "exchange": "US",
+      "name": "BayFirst Financial Corp.",
+      "day_change_pct": 20.67,
+      "market_cap": 170809433
+    },
+    {
+      "ticker": "VSTM",
+      "exchange": "US",
+      "name": "Verastem, Inc.",
+      "day_change_pct": 19.71,
+      "market_cap": 1121453685
+    },
+    {
+      "ticker": "CDZI",
+      "exchange": "US",
+      "name": "Cadiz Inc.",
+      "day_change_pct": 18.32,
+      "market_cap": 322619656
+    },
+    {
+      "ticker": "REAX",
+      "exchange": "US",
+      "name": "Real REMAX Group Inc.",
+      "day_change_pct": 17.57,
+      "market_cap": 584650077
+    },
+    {
+      "ticker": "OPK",
+      "exchange": "US",
+      "name": "OPKO Health, Inc.",
+      "day_change_pct": 17.52,
+      "market_cap": 1201588442
+    },
+    {
+      "ticker": "KPLT",
+      "exchange": "US",
+      "name": "Katapult Holdings, Inc.",
+      "day_change_pct": 17.48,
+      "market_cap": 506397441
+    },
+    {
+      "ticker": "RGC",
+      "exchange": "US",
+      "name": "Regencell Bioscience Holdings Limited",
+      "day_change_pct": 17.39,
+      "market_cap": 4720819260
+    },
+    {
+      "ticker": "EVEX",
+      "exchange": "US",
+      "name": "Eve Holding, Inc.",
+      "day_change_pct": 16.78,
+      "market_cap": 581972176
+    }
+  ],
+  "top_losers": [
+    {
+      "ticker": "FMC",
+      "exchange": "US",
+      "name": "FMC Corporation",
+      "day_change_pct": -30.53,
+      "market_cap": 874168548
+    },
+    {
+      "ticker": "MAN",
+      "exchange": "US",
+      "name": "ManpowerGroup Inc.",
+      "day_change_pct": -15.82,
+      "market_cap": 2034153632
+    },
+    {
+      "ticker": "ATII",
+      "exchange": "US",
+      "name": "Archimedes Tech SPAC Partners II Co.",
+      "day_change_pct": -15.51,
+      "market_cap": 251515000
+    },
+    {
+      "ticker": "FSZ",
+      "exchange": "TSX",
+      "name": "Fiera Capital Corporation",
+      "day_change_pct": -12.99,
+      "market_cap": 354869627
+    },
+    {
+      "ticker": "SHMD",
+      "exchange": "US",
+      "name": "SCHMID Group N.V.",
+      "day_change_pct": -12.5,
+      "market_cap": 173980601
+    },
+    {
+      "ticker": "AQST",
+      "exchange": "US",
+      "name": "Aquestive Therapeutics, Inc.",
+      "day_change_pct": -11.93,
+      "market_cap": 509577291
+    },
+    {
+      "ticker": "GLND",
+      "exchange": "US",
+      "name": "Greenland Energy Company",
+      "day_change_pct": -11.54,
+      "market_cap": 150869169
+    },
+    {
+      "ticker": "TOP",
+      "exchange": "US",
+      "name": "TOP Financial Group Limited",
+      "day_change_pct": -11.16,
+      "market_cap": 1645283323
+    },
+    {
+      "ticker": "VICR",
+      "exchange": "US",
+      "name": "Vicor Corporation",
+      "day_change_pct": -10.36,
+      "market_cap": 10139792501
+    },
+    {
+      "ticker": "SMTC",
+      "exchange": "US",
+      "name": "Semtech Corporation",
+      "day_change_pct": -10.01,
+      "market_cap": 13458488525
+    },
+    {
+      "ticker": "TBN",
+      "exchange": "US",
+      "name": "Tamboran Resources Corporation",
+      "day_change_pct": -9.74,
+      "market_cap": 1069778639
+    },
+    {
+      "ticker": "QMCO",
+      "exchange": "US",
+      "name": "Quantum Corporation",
+      "day_change_pct": -9.45,
+      "market_cap": 851453072
+    },
+    {
+      "ticker": "ZSQR",
+      "exchange": "US",
+      "name": "Z Squared Inc.",
+      "day_change_pct": -9.36,
+      "market_cap": 225781691
+    },
+    {
+      "ticker": "CIA",
+      "exchange": "TSX",
+      "name": "Champion Iron Limited",
+      "day_change_pct": -9.09,
+      "market_cap": 1229555753
+    },
+    {
+      "ticker": "LIB",
+      "exchange": "TSXV",
+      "name": "LibertyStream Infrastructure Partners Inc.",
+      "day_change_pct": -8.86,
+      "market_cap": 175808440
+    }
+  ],
+  "top_by_market_cap": [
+    {
+      "ticker": "NVDA",
+      "exchange": "US",
+      "name": "NVIDIA Corporation",
+      "market_cap": 5245452810000
+    },
+    {
+      "ticker": "AAPL",
+      "exchange": "US",
+      "name": "Apple Inc.",
+      "market_cap": 4991209560000
+    },
+    {
+      "ticker": "GOOGL",
+      "exchange": "US",
+      "name": "Alphabet Inc.",
+      "market_cap": 4270960600000
+    },
+    {
+      "ticker": "GOOG",
+      "exchange": "US",
+      "name": "Alphabet Inc.",
+      "market_cap": 4245092330999
+    },
+    {
+      "ticker": "MSFT",
+      "exchange": "US",
+      "name": "Microsoft Corporation",
+      "market_cap": 4005636259665
+    },
+    {
+      "ticker": "AMZN",
+      "exchange": "US",
+      "name": "Amazon.com, Inc.",
+      "market_cap": 2747921245603
+    },
+    {
+      "ticker": "SPCX",
+      "exchange": "US",
+      "name": "Space Exploration Technologies Corp.",
+      "market_cap": 2017192749908
+    },
+    {
+      "ticker": "TSM",
+      "exchange": "US",
+      "name": "Taiwan Semiconductor Manufacturing Company Limited",
+      "market_cap": 1918562411136
+    },
+    {
+      "ticker": "META",
+      "exchange": "US",
+      "name": "Meta Platforms, Inc.",
+      "market_cap": 1876798786082
+    },
+    {
+      "ticker": "AVGO",
+      "exchange": "US",
+      "name": "Broadcom Inc.",
+      "market_cap": 1643703971415
+    },
+    {
+      "ticker": "TSLA",
+      "exchange": "US",
+      "name": "Tesla, Inc.",
+      "market_cap": 1431473957481
+    },
+    {
+      "ticker": "BRK.A",
+      "exchange": "US",
+      "name": "Berkshire Hathaway Inc.",
+      "market_cap": 1127077304698
+    },
+    {
+      "ticker": "BRK.B",
+      "exchange": "US",
+      "name": "Berkshire Hathaway Inc.",
+      "market_cap": 1125357792008
+    },
+    {
+      "ticker": "LLY",
+      "exchange": "US",
+      "name": "Eli Lilly and Company",
+      "market_cap": 1115631416125
+    },
+    {
+      "ticker": "MU",
+      "exchange": "US",
+      "name": "Micron Technology, Inc.",
+      "market_cap": 1053626551943
+    }
+  ]
+}
