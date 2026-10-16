@@ -9,9 +9,14 @@ project (`../docs/methodology.md` §0).
 
 ## What's real here and what isn't
 
-- **The curve itself**: the actual `research.backtest.walk_forward` results
-  (`../scripts/export_web_data.py` exports it) — same data as
-  `../docs/methodology.md` §5, not a separate or prettier number.
+- **The curve itself**: the actual `research.backtest.walk_forward` results,
+  same code as `../docs/methodology.md` §5, not a separate or prettier
+  number. Recomputed on request from live price data by the `app` service
+  (`../app.py`) when it's reachable; otherwise served from the static
+  snapshot baked in at build time (`data/backtest.json`, from
+  `../scripts/export_web_data.py`). `pages/api/portfolio.js` tries the
+  former and falls back to the latter — the page shows which one you're
+  looking at.
 - **The live point**: real quotes from Yahoo Finance's chart API
   (`pages/api/quotes.js`), applied against the strategy's final (most-
   recently-rebalanced) weights as of the backtest's data cutoff. It is a
@@ -20,6 +25,37 @@ project (`../docs/methodology.md` §0).
 - **What it is not**: a real brokerage position. This is a simulator.
   Nothing here ever submits an order, to Wealthsimple, Alpaca, or anywhere
   else.
+
+## Architecture
+
+Two Vercel services, defined in `../vercel.json`:
+
+- **`web`** (this directory) — the public Next.js site. Everything (the
+  page, `/api/quotes`, `/api/portfolio`) is served from here.
+- **`app`** (`../app.py`, root of the repo) — an internal-only FastAPI
+  service. Not publicly routable; `web` reaches it at request time through
+  a service *binding*, which injects its URL into `web`'s server-side
+  functions as `process.env.APP_URL` (never into the browser bundle).
+  `pages/api/portfolio.js` is the only thing that reads `APP_URL` — it
+  proxies to `app`'s `/api/portfolio?method=...` and falls back to the
+  static snapshot if that call fails or `APP_URL` isn't set (e.g. local
+  `npm run dev` without the Python service running alongside it).
+
+`app` fetches price history live (stockanalysis.com) rather than reading
+`../data/*.json` — that directory is gitignored, so none of it exists in
+the deployed function in the first place.
+
+Local development with the live path:
+```bash
+# terminal 1, from the repo root
+.venv/bin/python -m uvicorn app:app --reload --port 8099
+
+# terminal 2
+cd web
+APP_URL=http://127.0.0.1:8099 npm run dev
+```
+Without `APP_URL` set, `npm run dev` still works — it just serves the
+static snapshot for every method.
 
 ## Local development
 
@@ -39,27 +75,21 @@ cd ..
 
 ## Deploying to Vercel
 
-This is a standard Next.js app — Vercel auto-detects it with zero config.
-Two ways to actually put it live (both need your own free Vercel account;
-that part can't be done on your behalf):
+This is now a two-service project (see Architecture above), configured by
+`../vercel.json` at the **repo root** — unlike a plain Next.js deploy, the
+project's Root Directory should be the repo root, not `web/`, so Vercel
+sees `vercel.json` and sets up both services. Needs your own free Vercel
+account; that part can't be done on your behalf.
 
-**Option A — Vercel CLI (fastest for a one-off deploy):**
-```bash
-npm install -g vercel   # one-time
-cd web
-vercel                  # first run asks you to log in (browser/GitHub), then deploys
-vercel --prod           # promote to your production URL
-```
-
-**Option B — Connect the GitHub repo (recommended if you want every push
-to auto-deploy):**
 1. Push this repo to GitHub (if not already).
-2. At vercel.com → "Add New Project" → import the repo.
-3. Set the project's **Root Directory** to `web/` (this is the one
-   non-default setting needed, since the Next.js app isn't at the repo
-   root) — Vercel detects everything else (framework, build command)
-   automatically.
-4. Deploy. Every push to `main` redeploys automatically after that.
+2. At vercel.com → "Add New Project" → import the repo. Vercel reads
+   `vercel.json`'s `services` block and should detect both `web`
+   (Next.js) and `app` (Python) automatically — leave Root Directory as
+   `.` (the repo root).
+3. Deploy. Only `web` is publicly routable (the `rewrites` entry in
+   `vercel.json` sends every path to it); `app` is reachable only from
+   `web`'s server-side code, via the injected `APP_URL` binding.
+4. Every push to `main` redeploys both services automatically after that.
 
 ## Data freshness
 

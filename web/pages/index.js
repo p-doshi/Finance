@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
-import backtest from "../data/backtest.json";
+import staticBacktest from "../data/backtest.json";
 import EquityChart from "../components/EquityChart";
 
 const METHOD_LABELS = {
@@ -13,9 +13,23 @@ const METHOD_LABELS = {
 
 const POLL_MS = 30_000;
 
+// Seed state from the static build-time snapshot so the page paints
+// instantly; /api/portfolio (proxied to the "app" service, falling back
+// to this same snapshot if that call fails) then refreshes it per method.
+const INITIAL_PORTFOLIO = {
+  tickers: staticBacktest.tickers,
+  as_of_date: staticBacktest.as_of_date,
+  last_known_prices: staticBacktest.last_known_prices,
+  rf: staticBacktest.rf,
+  method: "risk_parity",
+  data: staticBacktest.methods.risk_parity,
+  source: "static",
+};
+
 export default function Home() {
   const [method, setMethod] = useState("risk_parity");
   const [amount, setAmount] = useState(10_000);
+  const [portfolio, setPortfolio] = useState(INITIAL_PORTFOLIO);
   const [quotes, setQuotes] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
   const [error, setError] = useState(null);
@@ -42,7 +56,26 @@ export default function Home() {
     };
   }, []);
 
-  const data = backtest.methods[method];
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMethod() {
+      try {
+        const res = await fetch(`/api/portfolio?method=${method}`);
+        const json = await res.json();
+        if (!cancelled) setPortfolio(json);
+      } catch (e) {
+        // keep whatever we already had (static seed or a prior method's
+        // live data) rather than blanking the page
+        console.error(`portfolio fetch failed for ${method}: ${e}`);
+      }
+    }
+    loadMethod();
+    return () => {
+      cancelled = true;
+    };
+  }, [method]);
+
+  const data = portfolio.data;
   const scale = amount / 10_000;
   const scaledCurve = useMemo(
     () => data.equity_curve.map((p) => ({ date: p.date, value: p.value * scale })),
@@ -54,9 +87,9 @@ export default function Home() {
     if (!quotes) return null;
     let mult = 0;
     let missing = false;
-    for (const ticker of backtest.tickers) {
+    for (const ticker of portfolio.tickers) {
       const w = data.final_weights[ticker] || 0;
-      const lastKnown = backtest.last_known_prices[ticker];
+      const lastKnown = portfolio.last_known_prices[ticker];
       const live = quotes[ticker]?.price;
       if (live == null) {
         missing = true;
@@ -65,7 +98,7 @@ export default function Home() {
       mult += w * (live / lastKnown);
     }
     return missing ? null : mult;
-  }, [quotes, data]);
+  }, [quotes, data, portfolio]);
 
   const liveValue = liveMultiplier != null ? baseValue * liveMultiplier : null;
   const dollarChange = liveValue != null ? liveValue - baseValue : null;
@@ -80,8 +113,8 @@ export default function Home() {
       <main style={{ maxWidth: 820, margin: "0 auto", padding: "24px 16px 48px" }}>
         <h1 style={{ fontSize: 20, fontWeight: 650, margin: "0 0 4px" }}>Live Portfolio Simulator</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 20px", maxWidth: "64ch" }}>
-          The curve is a real, walk-forward out-of-sample backtest ({backtest.methods.risk_parity.equity_curve[0].date}{" "}
-          to {backtest.as_of_date}) — see the methodology write-up for how it was built and validated. The{" "}
+          The curve is a real, walk-forward out-of-sample backtest ({data.equity_curve[0].date}{" "}
+          to {portfolio.as_of_date}) — see the methodology write-up for how it was built and validated. The{" "}
           <b style={{ color: "var(--critical)" }}>LIVE</b> point extends it using real-time quotes applied against the
           strategy&apos;s last-rebalanced weights, polled every 30s. Simulated money, not a real brokerage position —
           this project never submits an order anywhere.
@@ -134,13 +167,16 @@ export default function Home() {
             <div style={{ fontSize: 13, color: dollarChange >= 0 ? "var(--good)" : "var(--critical)" }}>
               {dollarChange >= 0 ? "+" : ""}
               {dollarChange.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pctChangeSinceBacktest >= 0 ? "+" : ""}
-              {pctChangeSinceBacktest.toFixed(2)}% since {backtest.as_of_date}) · total gain {totalGainPct >= 0 ? "+" : ""}
-              {totalGainPct.toFixed(1)}% since {backtest.methods.risk_parity.equity_curve[0].date}
+              {pctChangeSinceBacktest.toFixed(2)}% since {portfolio.as_of_date}) · total gain {totalGainPct >= 0 ? "+" : ""}
+              {totalGainPct.toFixed(1)}% since {data.equity_curve[0].date}
             </div>
           )}
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
             {fetchedAt ? `Quotes as of ${new Date(fetchedAt).toLocaleTimeString()}` : "Fetching live quotes…"}
             {error && <span style={{ color: "var(--critical)" }}> · some quotes unavailable</span>}
+            {portfolio.source === "static" && (
+              <span> · backtest from a cached snapshot (live recompute unavailable right now)</span>
+            )}
           </div>
         </div>
 
@@ -167,7 +203,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {backtest.tickers.map((t) => {
+              {portfolio.tickers.map((t) => {
                 const q = quotes?.[t];
                 return (
                   <tr key={t} style={{ borderTop: "1px solid var(--grid)" }}>
