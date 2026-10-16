@@ -1,9 +1,33 @@
+import io
+import zipfile
 from datetime import date, timedelta
+from unittest.mock import patch
 
 import pytest
 
 from portfolio_pipeline.data.fetch import DataQualityError
-from portfolio_pipeline.data.fetch_factors import parse_factor_csv
+from portfolio_pipeline.data.fetch_factors import _fetch_zip_csv_text, parse_factor_csv
+
+
+class _FakeResponse:
+    def __init__(self, body: bytes):
+        self._body = body
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def _zip_bytes(filename: str, content: str) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(filename, content)
+    return buf.getvalue()
 
 HEADER = (
     "This file was created by using the 202608 CRSP database.\n"
@@ -52,6 +76,45 @@ def test_parse_factor_csv_rejects_missing_header():
     csv_text = "garbage\nmore garbage\n" + "19260701,0.09,-0.23,-0.28,0.01\n" * 120
     with pytest.raises(DataQualityError, match="column-header"):
         parse_factor_csv(csv_text)
+
+
+def test_parse_factor_csv_skips_rows_with_malformed_date():
+    rows = _make_csv(110).splitlines()
+    rows.insert(5, "not-a-date,0.09,-0.23,-0.28,0.01")  # 10 real header/data rows precede this
+    csv_text = "\n".join(rows)
+    df = parse_factor_csv(csv_text)
+    assert len(df) == 110  # the malformed row was skipped, not counted or crashed on
+
+
+def test_parse_factor_csv_skips_rows_with_non_numeric_values():
+    rows = _make_csv(110).splitlines()
+    rows.insert(5, "19270101,oops,-0.23,-0.28,0.01")
+    csv_text = "\n".join(rows)
+    df = parse_factor_csv(csv_text)
+    assert len(df) == 110
+
+
+def test_fetch_zip_csv_text_extracts_csv_from_a_real_zip():
+    body = _zip_bytes("factors.csv", "hello,world\n1,2\n")
+    with patch("portfolio_pipeline.data.fetch_factors.urllib.request.urlopen",
+               return_value=_FakeResponse(body)):
+        text = _fetch_zip_csv_text("https://example.com/fake.zip")
+    assert text == "hello,world\n1,2\n"
+
+
+def test_fetch_zip_csv_text_raises_if_zip_has_no_csv():
+    body = _zip_bytes("readme.txt", "not a csv")
+    with patch("portfolio_pipeline.data.fetch_factors.urllib.request.urlopen",
+               return_value=_FakeResponse(body)), \
+            pytest.raises(DataQualityError, match="no CSV found"):
+        _fetch_zip_csv_text("https://example.com/fake.zip")
+
+
+def test_fetch_zip_csv_text_wraps_network_error():
+    with patch("portfolio_pipeline.data.fetch_factors.urllib.request.urlopen",
+               side_effect=OSError("connection refused")), \
+            pytest.raises(DataQualityError, match="fetch failed"):
+        _fetch_zip_csv_text("https://example.com/fake.zip")
 
 
 def test_parse_factor_csv_handles_5factor_layout():
