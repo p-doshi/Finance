@@ -635,6 +635,55 @@ the top of that ranking as an actual buy list would be acting on an
 ordering that hasn't been shown to predict anything, which is exactly the
 distinction this section exists to make rather than leave implicit.
 
+### Deflated Sharpe Ratio and Probability of Backtest Overfitting (`research/overfitting.py`)
+
+Bailey & López de Prado's two corrections for exactly the situation this
+project has been in since Phase 1: 5 weighting methods, compared on the
+same 24 out-of-sample periods, and Phase 0 originally picked whichever
+looked best. Comparing 5 trials and reporting the best one is a multiple-
+comparison problem even when the comparison is already properly
+out-of-sample — these two numbers quantify it rather than leave it
+implicit.
+
+Run on the actual Phase 1 backtest (`scripts/validate_overfitting.py`):
+
+- **Out-of-sample per-period Sharpe:** risk_parity and equal_weight tie at
+  0.399 (un-annualized), hrp 0.388, min_variance 0.371, max_sharpe 0.313 —
+  last place, consistent with every other angle this project has already
+  checked on max-Sharpe.
+- **Deflated Sharpe Ratio for the observed best (risk_parity): 0.956.**
+  Given 5 trials with Sharpe variance 0.00128 across them, the expected
+  best Sharpe achievable by pure luck is only 0.043 — the observed 0.399
+  clears that bar comfortably, crossing the conventional DSR > 0.95
+  threshold. Skewness (+0.25) and raw kurtosis (3.55) were measured and
+  fed into the correction, not assumed away.
+- **Probability of Backtest Overfitting: 0.81–0.85** (n_splits=8 and 12,
+  70 and 924 combinatorial in-sample/out-of-sample splits respectively).
+  This is *above* 0.5, the "no better than random" line — well above it.
+
+**These two findings look contradictory and aren't — they answer different
+questions, and together they sharpen the picture rather than conflict.**
+DSR asks: is the best Sharpe observed across this group distinguishable
+from pure luck, given how many trials were run? Answer: yes — there is
+likely real, positive collective skill somewhere in this set of methods.
+PBO asks a narrower, different question: does *picking whichever method
+looks best in one half of the data* reliably identify the method that
+will also look best in the other half? Answer: no — worse than a coin
+flip, which only makes sense if the methods are hard to tell apart from
+each other on this data. That second finding is the same fact already
+found independently in Phase 1 (every pairwise Sharpe confidence interval
+among the 5 methods overlaps) showing up again from a completely
+different angle: there is probably real edge in this group of methods as
+a whole, but this particular 24-period, 5-trial setup cannot reliably
+tell you *which one* of them to prefer.
+
+**Honest caveat carried over from Phase 1:** CSCV's block size here is
+only 2-3 periods (24 periods split into 8 or 12 blocks) — a very small
+sample to estimate each split's Sharpe ratio from. Both PBO numbers
+should be read as indicative given the data available (2 years of
+monthly out-of-sample periods), not as a precise estimate a larger
+backtest would also produce.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time

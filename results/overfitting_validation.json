@@ -1,0 +1,43 @@
+{
+  "n_periods": 24,
+  "sharpes_by_method": {
+    "equal_weight": 0.399021106638233,
+    "risk_parity": 0.3991696041825659,
+    "hrp": 0.3876148802840914,
+    "min_variance": 0.37062587319179446,
+    "max_sharpe": 0.31348769141477
+  },
+  "best_method": "risk_parity",
+  "deflated_sharpe": {
+    "best_trial": "risk_parity",
+    "sr_hat": 0.3991696041825659,
+    "n_trials": 5,
+    "sharpe_variance_across_trials": 0.00127951315803279,
+    "sr_benchmark_expected_max_under_null": 0.04265942512265559,
+    "skewness": 0.25147475630456856,
+    "kurtosis_raw": 3.5513127651666,
+    "n_obs": 24,
+    "dsr": 0.9562464300510999,
+    "trial_sharpes": {
+      "equal_weight": 0.399021106638233,
+      "risk_parity": 0.3991696041825659,
+      "hrp": 0.3876148802840914,
+      "min_variance": 0.37062587319179446,
+      "max_sharpe": 0.31348769141477
+    }
+  },
+  "pbo": {
+    "8": {
+      "pbo": 0.8142857142857143,
+      "n_combinations": 70,
+      "n_splits": 8,
+      "logits_mean": -0.418181667493755
+    },
+    "12": {
+      "pbo": 0.8452380952380952,
+      "n_combinations": 924,
+      "n_splits": 12,
+      "logits_mean": -0.6712584051017306
+    }
+  }
+}

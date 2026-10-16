@@ -89,4 +89,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/generate_tearsheet.py  # HTML tearsheets (results/tearsheet_*.html)
 .venv/bin/python scripts/scan_universe.py  # Stage A: full US+Canada market scan
 .venv/bin/python scripts/validate_ranker_ic.py  # IC validation of the momentum ranker
+.venv/bin/python scripts/validate_overfitting.py  # Deflated Sharpe Ratio + PBO on the 5-method comparison
 ```
