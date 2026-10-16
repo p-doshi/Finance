@@ -64,6 +64,7 @@ scripts/
   inverse_beta.py         — beta/52-week heuristic baseline
   run_portfolio.py        — in-sample risk-parity / Markowitz run (Phase 0)
   run_backtest.py         — walk-forward, out-of-sample backtest (Phase 1)
+  generate_tearsheet.py   — quantstats HTML tearsheet per method (results/tearsheet_*.html)
   scan_universe.py        — full US+Canada market scan + liquidity screen (Stage A)
 docs/methodology.md       — data sources, assumptions tested, full results, roadmap
 results/                  — JSON output of the scripts above
@@ -79,5 +80,6 @@ python3 -m venv .venv
 .venv/bin/python scripts/fetch_prices.py   # needs network; pulls 5y history for the watchlist
 .venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample
 .venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample
+.venv/bin/python scripts/generate_tearsheet.py  # HTML tearsheets (results/tearsheet_*.html)
 .venv/bin/python scripts/scan_universe.py  # Stage A: full US+Canada market scan
 ```

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from portfolio_pipeline.research.backtest import walk_forward, block_bootstrap_ci
+from portfolio_pipeline.research.backtest import walk_forward, block_bootstrap_ci, BacktestResult
 from portfolio_pipeline.research.optimizers import equal_weight, min_variance_weight
 
 RNG = np.random.default_rng(42)
@@ -91,6 +91,53 @@ def test_equity_curve_matches_manual_compounding():
     manual = np.exp(np.cumsum(res.net_period_returns))
     np.testing.assert_allclose(curve, manual)
     assert curve[-1] == pytest.approx(np.exp(res.net_period_returns.sum()))
+
+
+def _result(period_returns):
+    period_returns = np.array(period_returns)
+    n = len(period_returns)
+    return BacktestResult(method="test", dates=list(range(n)), weights=[np.array([1.0])] * n,
+                           period_returns=period_returns, turnover=np.zeros(n), cost=np.zeros(n))
+
+
+def test_max_drawdown_counts_a_loss_in_the_very_first_period():
+    """The actual bug found cross-checking against quantstats on real
+    data (docs/methodology.md): a loss in the first period must register
+    as a drawdown from the implicit starting equity of 1.0, not get
+    silently absorbed because `np.maximum.accumulate` starting from the
+    post-first-period value took that value as its own peak. Here, the
+    only loss is period 1 (-10%); if it isn't counted, max_drawdown would
+    wrongly come back as 0 once the series recovers above its start."""
+    rets = [np.log(0.90), np.log(1.02), np.log(1.03), np.log(1.01)]  # -10%, then all gains
+    res = _result(rets)
+    assert res.max_drawdown() == pytest.approx(-0.10, abs=1e-9)
+
+
+def test_max_drawdown_known_multi_period_case():
+    # +20%, -30%, +10%: trough is 1.20 * 0.70 = 0.84 -> drawdown from peak 1.20 is (0.84/1.20 - 1) = -30%
+    rets = [np.log(1.20), np.log(0.70), np.log(1.10)]
+    res = _result(rets)
+    assert res.max_drawdown() == pytest.approx(-0.30, abs=1e-9)
+
+
+def test_max_drawdown_matches_quantstats_on_identical_series():
+    """Pinned to the exact real discrepancy found: quantstats computed
+    -0.055637515839061846 on this project's actual risk-parity walk-forward
+    log-returns, where this project's own max_drawdown() was returning
+    -0.0433 before the fix. Hardcoding the real log-return series here
+    (res.net_period_returns, not the simple/expm1-converted values shown
+    in the tearsheet) so this doesn't silently regress without needing
+    live data or quantstats installed."""
+    rets = [-0.041746820561121764, -0.009294543513022238, -0.0062038350081886125,
+            0.04354710127074744, -0.014681588213113, -0.007334379667662257,
+            0.026198768329029943, 0.01378992119057157, 0.019230172100709444,
+            0.016856516153524542, 0.016752116672622372, 0.011477621328044828,
+            0.0013560601707369156, 0.015060993563746862, 0.0696044914138206,
+            0.07933732334643695, -0.04428407304629001, 0.012026654560575858,
+            0.026902602855007646, 0.012101898965234583, 0.02783418995412101,
+            0.02022563391329936, -0.025755446467769613, 0.01353223501623073]
+    res = _result(rets)
+    assert res.max_drawdown() == pytest.approx(-0.055637515839061846, abs=1e-9)
 
 
 def test_not_enough_history_raises():

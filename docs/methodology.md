@@ -212,21 +212,35 @@ only **24 out-of-sample holding periods (~2 years)** to evaluate on. That is
 not enough data to draw a confident conclusion, and the results below should
 be read that way — wide bands, not a verdict.
 
-| Method | Ann. return (net) | Ann. vol | Sharpe | Max drawdown | Avg turnover |
-|---|---|---|---|---|---|
-| Equal weight | 15.45% | 10.40% | 1.08 | -4.40% | 4.2% |
-| Risk parity | 14.83% | 10.00% | 1.06 | -4.33% | 5.6% |
-| Min variance | 15.82% | 11.44% | 1.01 | -4.62% | 11.4% |
-| Max Sharpe | 11.70% | 10.19% | 0.73 | -7.18% | 28.9% |
+| Method | Ann. return (net) | Ann. vol | Sharpe | Sortino | Calmar | Max drawdown | Avg turnover |
+|---|---|---|---|---|---|---|---|
+| Equal weight | 15.45% | 10.40% | 1.08 | 2.14 | 2.79 | -5.55% | 4.2% |
+| Risk parity | 14.83% | 10.00% | 1.06 | 2.17 | 2.67 | -5.56% | 5.6% |
+| HRP | 13.49% | 9.42% | 0.98 | 2.03 | 2.42 | -5.58% | 13.6% |
+| Min variance | 15.82% | 11.44% | 1.01 | 2.15 | 2.03 | -7.81% | 11.4% |
+| Max Sharpe | 11.70% | 10.19% | 0.73 | 1.23 | 1.34 | -8.72% | 28.9% |
+
+*(Max drawdown corrected from an earlier published version of this table,
+which understated every method's drawdown by failing to anchor the
+return series to a starting equity of 1.0 before the first period — see
+§7's quantstats tearsheet section for how this was found and fixed. The
+correction makes the "max-Sharpe is worse" finding below stronger, not
+weaker: its real drawdown is -8.72%, not the originally-reported -7.18%.)*
 
 **The method that looked best in-sample (Phase 0: max-Sharpe, Sharpe 2.14) is
-the worst performer out-of-sample** — lowest return, worst drawdown, and by
-far the highest turnover (28.9% average, vs. 4–11% for the others), which
-also means it eats the most transaction-cost drag. This is overfitting shown
-directly: the expected-return estimate max-Sharpe leans on is noisy enough
-that optimizing hard against it in-sample doesn't transfer forward.
+the worst performer out-of-sample** on every metric here — lowest return,
+worst Sortino, worst Calmar, worst drawdown, and by far the highest turnover
+(28.9% average, vs. 4–14% for the others), which also means it eats the
+most transaction-cost drag. This is overfitting shown directly: the
+expected-return estimate max-Sharpe leans on is noisy enough that
+optimizing hard against it in-sample doesn't transfer forward. HRP, added
+later (§7), doesn't change this story — see its own honest negative
+finding there (underperforms plain risk parity at this N=12 scale, with
+higher turnover, because its robustness benefit is specifically about
+poorly-conditioned covariance matrices, which 12 assets over 756
+observations never was).
 
-**None of the four methods are statistically distinguishable from each
+**None of the five methods are statistically distinguishable from each
 other** at a 90% block-bootstrap confidence level — every pairwise Sharpe CI
 overlaps the others. With 24 periods, that's the honest conclusion; claiming
 "risk parity beats max-Sharpe" from this sample alone would be overstating
@@ -236,34 +250,37 @@ what 2 years of monthly data can support.
 |---|---|---|
 | Equal weight | 7.8% – 31.7% | 0.84 – 3.41 |
 | Risk parity | 7.5% – 30.0% | 0.84 – 3.48 |
+| HRP | 6.1% – 27.5% | 0.73 – 3.47 |
 | Min variance | 8.0% – 32.4% | 0.73 – 3.28 |
 | Max Sharpe | 1.6% – 29.3% | 0.16 – 3.68 |
 
 ### Transaction costs matter most for the method that needed them least
 
-| Cost (bps, one-way) | Risk parity ann. return | Max Sharpe ann. return |
-|---|---|---|
-| 0 | 14.90% | 12.09% |
-| 10 | 14.83% | 11.70% |
-| 25 | 14.71% | 11.12% |
-| 50 | 14.52% | 10.16% |
+| Cost (bps, one-way) | Risk parity ann. return | HRP ann. return | Max Sharpe ann. return |
+|---|---|---|---|
+| 0 | 14.90% | 13.67% | 12.09% |
+| 10 | 14.83% | 13.49% | 11.70% |
+| 25 | 14.71% | 13.21% | 11.12% |
+| 50 | 14.52% | 12.75% | 10.16% |
 
 Risk parity's low turnover (5.6% average) makes it nearly cost-insensitive;
 max-Sharpe's high turnover (28.9%) means realistic trading costs erode almost
-2 full points of annual return between 0 and 50bps.
+2 full points of annual return between 0 and 50bps. HRP sits in between —
+more cost-sensitive than risk parity (its clustering-based rebalancing
+trades more, 13.6% average turnover), but nowhere near max-Sharpe's drag.
 
 ### Window-length sensitivity: the ranking itself isn't stable
 
 Shortening the estimation window to 504 days (2y) — noisier covariance
 estimates, but 36 out-of-sample periods instead of 24 — **flips the
 result**: over that (more AI-rally-weighted) sub-period, max-Sharpe's
-26.96% return is the highest of the four, though its Sharpe (1.48) still
+26.96% return is the highest of all five, though its Sharpe (1.48) still
 trails risk parity's (1.92) because of higher volatility.
 
-| Window | Equal wt | Risk parity | Min variance | Max Sharpe |
-|---|---|---|---|---|
-| 2y (36 periods) | 24.63% / Sharpe 1.90 | 22.66% / Sharpe 1.92 | 21.53% / Sharpe 1.75 | 26.96% / Sharpe 1.48 |
-| 3y (24 periods) | 15.45% / Sharpe 1.08 | 14.83% / Sharpe 1.06 | 15.82% / Sharpe 1.01 | 11.70% / Sharpe 0.73 |
+| Window | Equal wt | Risk parity | HRP | Min variance | Max Sharpe |
+|---|---|---|---|---|---|
+| 2y (36 periods) | 24.63% / Sharpe 1.90 | 22.66% / Sharpe 1.92 | 21.29% / Sharpe 1.83 | 21.53% / Sharpe 1.75 | 26.96% / Sharpe 1.48 |
+| 3y (24 periods) | 15.45% / Sharpe 1.08 | 14.83% / Sharpe 1.06 | 13.49% / Sharpe 0.98 | 15.82% / Sharpe 1.01 | 11.70% / Sharpe 0.73 |
 
 **Which method "wins" depends on which historical window you test over as
 much as it depends on the method itself.** That's a real finding, not a
@@ -523,10 +540,43 @@ preferred for comparison since VaR isn't subadditive).
 
 Run on the existing Phase 1 backtest, these independently confirm the
 same finding from a different angle: max-Sharpe has by far the worst
-Calmar (1.63 vs. 3.4–3.5 for every other method) and worst CVaR95 (-5.51%
+Calmar (1.34 vs. 2.0–2.8 for every other method) and worst CVaR95 (-5.51%
 vs. -4.0% to -4.9%) — the method that looked best in-sample is worst by
 risk-adjusted-return metrics its own optimization objective doesn't
-directly optimize for, not just by raw out-of-sample return.
+directly optimize for, not just by raw out-of-sample return. (Calmar
+figures here reflect the max_drawdown fix below — finding this
+discrepancy via quantstats is what surfaced the bug in the first place.)
+
+### HTML tearsheets via quantstats (`scripts/generate_tearsheet.py`) — and a real bug this caught
+
+One tearsheet per method (`results/tearsheet_{method}.html`): cumulative
+return vs. SPY, drawdown underwater plot, rolling Sharpe/Sortino, monthly-
+return heatmap, and full benchmark-relative stats (alpha, beta, tracking
+error) — quantstats, the real tool (§7's survey), not a reimplementation.
+
+**Cross-checking this project's own `max_drawdown()` against quantstats on
+the identical return series exposed a genuine bug.** This project's risk-
+parity walk-forward returns open with a loss (period 1: -4.09%). quantstats
+reported max drawdown -5.56% on that series; this project's own
+`max_drawdown()` reported -4.33% — on the *same 24 numbers*. The cause:
+`np.maximum.accumulate` was being called starting from the first
+post-trade equity value, which became its own "running peak" by
+construction, so a loss in the very first period could never register as
+a drawdown relative to the true starting capital. Fixed by anchoring the
+curve to an implicit starting equity of 1.0 *before* the first period;
+the fix reproduces quantstats' -0.055637515839061846 to 9 decimal places.
+Three regression tests lock this in
+(`tests/test_backtest.py::test_max_drawdown_counts_a_loss_in_the_very_first_period`
+and two others, one pinned to the exact real series above so this can't
+silently regress without live data or quantstats installed).
+
+This changed every previously-published max-drawdown and Calmar number in
+this document (§5's table above reflects the corrected values) — all in
+the same direction (every drawdown deeper than first reported), and the
+max-Sharpe-is-worse finding got *stronger*, not weaker, after the
+correction. Worth stating plainly: this is exactly why cross-checking a
+hand-rolled metric against a real, independently-implemented tool is worth
+doing before publishing a number, not after.
 
 ## 8. Roadmap
 
