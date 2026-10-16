@@ -23,6 +23,7 @@ from portfolio_pipeline.research.optimizers import (
     min_variance_weight,
     max_sharpe_weight,
 )
+from portfolio_pipeline.research.hrp import hrp_weight
 from portfolio_pipeline.research.backtest import walk_forward, block_bootstrap_ci
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
@@ -68,12 +69,17 @@ def ms_fn(trailing):
     return max_sharpe_weight(cov, mu, RF)
 
 
+def hrp_fn(trailing):
+    cov = trailing.cov().values * 252
+    return hrp_weight(cov)
+
+
 def main():
     log_ret = load_log_returns()
     print(f"History: {len(log_ret)} trading days ({log_ret.index.min().date()} -> {log_ret.index.max().date()})")
     print(f"Window={WINDOW}d  rebal_every={REBAL_EVERY}d (~monthly)  cost={COST_BPS}bps one-way\n")
 
-    methods = {"equal_weight": eq_fn, "risk_parity": rp_fn, "min_variance": mv_fn, "max_sharpe": ms_fn}
+    methods = {"equal_weight": eq_fn, "risk_parity": rp_fn, "hrp": hrp_fn, "min_variance": mv_fn, "max_sharpe": ms_fn}
     results = {}
     for name, fn in methods.items():
         res = walk_forward(log_ret, fn, window=WINDOW, rebal_every=REBAL_EVERY, cost_bps=COST_BPS, method_name=name)
@@ -116,7 +122,7 @@ def main():
 
     # Transaction-cost sensitivity for the two methods people would actually consider trading
     print("\n--- Transaction-cost sensitivity (risk_parity, max_sharpe) ---")
-    for name in ["risk_parity", "max_sharpe"]:
+    for name in ["risk_parity", "hrp", "max_sharpe"]:
         print(f"{name}:")
         for bps in [0.0, 10.0, 25.0, 50.0]:
             fn = methods[name]

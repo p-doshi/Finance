@@ -22,6 +22,7 @@ from portfolio_pipeline.research.optimizers import (
     max_sharpe_weight,
     portfolio_stats,
 )
+from portfolio_pipeline.research.hrp import hrp_weight
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 BETAS = np.array([2.22, 0.21, 0.32, 0.38, 0.58, 0.25, 0.21, 0.91, 0.80, 0.46, 0.38, 1.30])
@@ -70,6 +71,7 @@ def main():
         "equal_weight": equal_weight(n),
         "inverse_beta": inverse_beta_weight(BETAS),
         "risk_parity": risk_parity_weight(cov3),
+        "hrp": hrp_weight(cov3),
         "min_variance": min_variance_weight(cov3),
         "max_sharpe": max_sharpe_weight(cov3, mu3, RF),
     }

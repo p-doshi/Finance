@@ -19,6 +19,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_pipeline.research.covariance import sample_covariance, shrunk_covariance, condition_number
 from portfolio_pipeline.research.optimizers import risk_parity_weight, portfolio_stats
+from portfolio_pipeline.research.hrp import hrp_weight
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -59,9 +60,15 @@ def build_for_k(ranked: list[dict], k: int):
     w_shrunk = risk_parity_weight(cov_shrunk)
     weight_diff = np.abs(w_sample - w_shrunk)
 
+    # HRP never inverts the covariance matrix at all (research/hrp.py), so it's
+    # run here on the raw sample covariance even where that matrix is singular
+    # (K=300) — exactly the case min_variance/max_sharpe would hard-fail on.
+    w_hrp = hrp_weight(cov_sample)
+
     mu = df.mean().values * 252  # only used for the return side of portfolio_stats, not the optimization itself
     stats_sample = portfolio_stats(w_sample, cov_sample, mu, rf=0.0426)
     stats_shrunk = portfolio_stats(w_shrunk, cov_shrunk, mu, rf=0.0426)
+    stats_hrp = portfolio_stats(w_hrp, cov_shrunk, mu, rf=0.0426)  # evaluated on the stable (shrunk) cov either way
 
     return {
         "k_requested": k, "n_assets": n_assets, "n_obs": n_obs,
@@ -70,6 +77,8 @@ def build_for_k(ranked: list[dict], k: int):
         "max_weight_diff_pp": float(weight_diff.max() * 100),
         "mean_weight_diff_pp": float(weight_diff.mean() * 100),
         "vol_sample": stats_sample["vol"], "vol_shrunk": stats_shrunk["vol"],
+        "vol_hrp": stats_hrp["vol"], "n_eff_hrp": stats_hrp["n_effective"],
+        "n_eff_sample_rp": stats_sample["n_effective"], "n_eff_shrunk_rp": stats_shrunk["n_effective"],
     }
 
 
@@ -80,7 +89,7 @@ def main():
 
     print(f"Ranked universe available: {len(ranked)} names with full 3/6/12mo history.\n")
     print(f"{'K':>5}{'n_assets':>10}{'n_obs':>8}{'shrink%':>9}{'cond(sample)':>14}{'cond(shrunk)':>14}"
-          f"{'max Δw(pp)':>12}{'vol(sample)%':>14}{'vol(shrunk)%':>14}")
+          f"{'max Δw(pp)':>12}{'vol(sample)%':>14}{'vol(shrunk)%':>14}{'vol(hrp)%':>12}{'n_eff(hrp)':>12}")
 
     results = []
     for k in [20, 50, 100, 200, 300]:
@@ -90,7 +99,8 @@ def main():
         results.append(r)
         print(f"{r['k_requested']:>5}{r['n_assets']:>10}{r['n_obs']:>8}{r['shrinkage_intensity']*100:>8.1f}%"
               f"{r['condition_number_sample']:>14.1f}{r['condition_number_shrunk']:>14.1f}"
-              f"{r['max_weight_diff_pp']:>11.2f}pp{r['vol_sample']*100:>13.1f}%{r['vol_shrunk']*100:>13.1f}%")
+              f"{r['max_weight_diff_pp']:>11.2f}pp{r['vol_sample']*100:>13.1f}%{r['vol_shrunk']*100:>13.1f}%"
+              f"{r['vol_hrp']*100:>11.1f}%{r['n_eff_hrp']:>12.1f}")
 
     RESULTS_DIR.mkdir(exist_ok=True)
     with open(RESULTS_DIR / "large_portfolio_shrinkage_comparison.json", "w") as f:

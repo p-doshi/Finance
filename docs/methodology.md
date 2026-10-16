@@ -482,6 +482,35 @@ with a synthetic reproduction that doesn't depend on live market data.
 Implemented via `sklearn.covariance.LedoitWolf` (the same implementation
 Riskfolio-Lib and skfolio use), not re-derived by hand.
 
+### Hierarchical Risk Parity (`research/hrp.py`)
+
+López de Prado, "Building Diversified Portfolios that Outperform
+Out-of-Sample," *J. Portfolio Management* 42(4), 2016. Three steps
+(correlation-distance clustering → quasi-diagonalization → recursive
+bisection), implemented as separate, auditable functions rather than one
+opaque call. The actual claimed benefit — HRP never inverts the covariance
+matrix, so it doesn't need it to be positive-definite — checked directly
+on real data at K=300 (`scripts/build_large_portfolio.py`, same run as the
+shrinkage table above, where sample covariance is singular): HRP still
+produces a valid long-only portfolio, volatility 11.4% (vs. shrunk risk
+parity's 11.5% — close agreement) and effective N=120.6 of 300 names
+(healthy diversification, not a degenerate corner solution). A synthetic
+regression test
+(`tests/test_hrp.py::test_hrp_handles_singular_covariance_where_matrix_inversion_would_fail`)
+locks this in without depending on live data.
+
+**Honest negative finding at small N:** added to the 12-stock walk-forward
+backtest (§5) too, where the result is the opposite of a sales pitch — HRP
+underperforms plain risk parity out-of-sample (Sharpe 0.98 vs. 1.06) with
+*higher* turnover (13.6% vs. 5.6%), not lower. This tracks the theory
+rather than contradicting it: HRP's advantage is specifically about
+robustness under a noisy or ill-conditioned covariance matrix, and 12
+assets with 756 observations was already well-conditioned in Phase 0
+(condition number 8.2) — there's no instability problem here for HRP to
+fix, and its extra clustering machinery just adds turnover without buying
+anything. The benefit shows up exactly where the theory says it should
+(large N, poorly-conditioned covariance), not as a universal upgrade.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
