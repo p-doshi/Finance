@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import staticBacktest from "../data/backtest.json";
 import EquityChart from "../components/EquityChart";
+import Nav from "../components/Nav";
 
 const METHOD_LABELS = {
   equal_weight: "Equal Weight",
@@ -110,8 +111,9 @@ export default function Home() {
       <Head>
         <title>Live Portfolio Simulator</title>
       </Head>
-      <main style={{ maxWidth: 820, margin: "0 auto", padding: "24px 16px 48px" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 650, margin: "0 0 4px" }}>Live Portfolio Simulator</h1>
+      <Nav />
+      <main style={{ maxWidth: 820, margin: "0 auto", padding: "20px 16px 48px" }}>
+        <h1 style={{ fontSize: 20, fontWeight: 650, margin: "0 0 4px" }}>My Portfolio</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 20px", maxWidth: "64ch" }}>
           The curve is a real, walk-forward out-of-sample backtest ({data.equity_curve[0].date}{" "}
           to {portfolio.as_of_date}) — see the methodology write-up for how it was built and validated. The{" "}
