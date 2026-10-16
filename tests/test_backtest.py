@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from portfolio_pipeline.research.backtest import walk_forward, block_bootstrap_ci, BacktestResult
+from portfolio_pipeline.research.backtest import BacktestResult, block_bootstrap_ci, walk_forward
 from portfolio_pipeline.research.optimizers import equal_weight, min_variance_weight
 
 RNG = np.random.default_rng(42)
@@ -114,7 +114,10 @@ def test_cost_proportional_to_turnover_and_bps():
 
 def test_weights_must_sum_to_one():
     data = _synthetic_returns()
-    bad_fn = lambda trailing_df: np.array([0.5, 0.5, 0.5, 0.5])  # sums to 2
+
+    def bad_fn(trailing_df):
+        return np.array([0.5, 0.5, 0.5, 0.5])  # sums to 2
+
     with pytest.raises(AssertionError):
         walk_forward(data, bad_fn, window=252, rebal_every=21)
 

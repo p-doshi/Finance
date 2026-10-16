@@ -2,11 +2,11 @@ import numpy as np
 import pytest
 
 from portfolio_pipeline.research.black_litterman import (
+    absolute_view,
+    black_litterman_posterior,
+    default_view_uncertainty,
     implied_risk_aversion,
     market_implied_returns,
-    default_view_uncertainty,
-    black_litterman_posterior,
-    absolute_view,
     relative_view,
 )
 from portfolio_pipeline.research.optimizers import max_sharpe_weight

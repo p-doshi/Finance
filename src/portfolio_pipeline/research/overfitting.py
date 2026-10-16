@@ -19,7 +19,9 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm, skew as _skew, kurtosis as _kurtosis
+from scipy.stats import kurtosis as _kurtosis
+from scipy.stats import norm
+from scipy.stats import skew as _skew
 
 EULER_MASCHERONI = 0.5772156649015329
 

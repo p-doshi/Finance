@@ -3,9 +3,9 @@ import pandas as pd
 import pytest
 
 from portfolio_pipeline.research.overfitting import (
-    probabilistic_sharpe_ratio,
-    expected_max_sharpe_under_null,
     deflated_sharpe_ratio,
+    expected_max_sharpe_under_null,
+    probabilistic_sharpe_ratio,
     probability_of_backtest_overfitting,
 )
 

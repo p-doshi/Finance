@@ -3,11 +3,11 @@ import pandas as pd
 import pytest
 
 from portfolio_pipeline.research.screen import (
-    compute_beta,
-    trailing_simple_return,
     annualized_vol,
+    compute_beta,
     max_drawdown,
     rank_universe,
+    trailing_simple_return,
 )
 
 RNG = np.random.default_rng(123)

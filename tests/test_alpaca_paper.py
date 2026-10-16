@@ -1,11 +1,14 @@
 import json
 import urllib.error
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from portfolio_pipeline.execution.alpaca_paper import (
-    AlpacaPaperClient, AlpacaCredentialsError, AlpacaAPIError, PAPER_BASE_URL,
+    PAPER_BASE_URL,
+    AlpacaAPIError,
+    AlpacaCredentialsError,
+    AlpacaPaperClient,
 )
 
 
@@ -100,17 +103,17 @@ def test_submit_order_builds_correct_request_body():
 
 def test_submit_order_rejects_invalid_side_without_any_network_call():
     client = AlpacaPaperClient(api_key_id="a", api_secret_key="b")
-    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen") as mock_urlopen:
-        with pytest.raises(ValueError, match="side must be"):
-            client.submit_order("NVDA", qty=1, side="hold")
+    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen") as mock_urlopen, \
+            pytest.raises(ValueError, match="side must be"):
+        client.submit_order("NVDA", qty=1, side="hold")
     mock_urlopen.assert_not_called()
 
 
 def test_submit_order_rejects_non_positive_qty_without_any_network_call():
     client = AlpacaPaperClient(api_key_id="a", api_secret_key="b")
-    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen") as mock_urlopen:
-        with pytest.raises(ValueError, match="qty must be positive"):
-            client.submit_order("NVDA", qty=0, side="buy")
+    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen") as mock_urlopen, \
+            pytest.raises(ValueError, match="qty must be positive"):
+        client.submit_order("NVDA", qty=0, side="buy")
     mock_urlopen.assert_not_called()
 
 
@@ -118,14 +121,14 @@ def test_http_error_wrapped_as_alpaca_api_error():
     client = AlpacaPaperClient(api_key_id="a", api_secret_key="b")
     err = urllib.error.HTTPError(url="x", code=403, msg="Forbidden", hdrs=None, fp=MagicMock(
         read=lambda: b'{"message": "insufficient buying power"}'))
-    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen", side_effect=err):
-        with pytest.raises(AlpacaAPIError, match="403"):
-            client.get_account()
+    with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen", side_effect=err), \
+            pytest.raises(AlpacaAPIError, match="403"):
+        client.get_account()
 
 
 def test_url_error_wrapped_as_alpaca_api_error():
     client = AlpacaPaperClient(api_key_id="a", api_secret_key="b")
     with patch("portfolio_pipeline.execution.alpaca_paper.urllib.request.urlopen",
-               side_effect=urllib.error.URLError("network down")):
-        with pytest.raises(AlpacaAPIError, match="request failed"):
-            client.get_positions()
+               side_effect=urllib.error.URLError("network down")), \
+            pytest.raises(AlpacaAPIError, match="request failed"):
+        client.get_positions()

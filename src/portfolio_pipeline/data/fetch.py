@@ -14,8 +14,8 @@ not acceptable for backtesting a broad historical universe screen.
 from __future__ import annotations
 
 import json
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path

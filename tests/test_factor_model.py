@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 import statsmodels.api as sm
 
-from portfolio_pipeline.research.factor_model import factor_regression, annualized_alpha
+from portfolio_pipeline.research.factor_model import annualized_alpha, factor_regression
 
 RNG = np.random.default_rng(88)
 

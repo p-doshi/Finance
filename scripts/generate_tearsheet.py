@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # headless — no display backend available/needed
 
 import numpy as np
@@ -26,8 +27,8 @@ import pandas as pd
 import quantstats as qs
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.optimizers import equal_weight, risk_parity_weight, max_sharpe_weight
 from portfolio_pipeline.research.backtest import walk_forward
+from portfolio_pipeline.research.optimizers import equal_weight, max_sharpe_weight, risk_parity_weight
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 RF = 0.0426
@@ -40,7 +41,8 @@ PERIODS_PER_YEAR = 252 / REBAL_EVERY
 def load_log_returns(tickers):
     series = {}
     for t in tickers:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()

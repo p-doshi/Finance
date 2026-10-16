@@ -23,10 +23,11 @@ precision-sensitive.
 from __future__ import annotations
 
 import json
-import urllib.request
 import urllib.error
+import urllib.request
 
-from .fetch import DataQualityError, PriceRow, USER_AGENT, validate as _validate_rows
+from .fetch import USER_AGENT, DataQualityError, PriceRow
+from .fetch import validate as _validate_rows
 
 YAHOO_SUFFIX = {"TSX": ".TO", "TSXV": ".V", "CSE": ".CN"}
 CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_}&interval=1d"

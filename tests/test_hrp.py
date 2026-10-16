@@ -1,9 +1,9 @@
 import numpy as np
+import pandas as pd
 import pytest
 
-from portfolio_pipeline.research.hrp import hrp_weight, correlation_distance
 from portfolio_pipeline.research.covariance import sample_covariance
-import pandas as pd
+from portfolio_pipeline.research.hrp import correlation_distance, hrp_weight
 
 RNG = np.random.default_rng(31)
 

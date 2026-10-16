@@ -27,9 +27,9 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.optimizers import risk_parity_weight
 from portfolio_pipeline.decision.trade_ticket import generate_trade_ticket
-from portfolio_pipeline.execution.alpaca_paper import AlpacaPaperClient, AlpacaCredentialsError, AlpacaAPIError
+from portfolio_pipeline.execution.alpaca_paper import AlpacaAPIError, AlpacaCredentialsError, AlpacaPaperClient
+from portfolio_pipeline.research.optimizers import risk_parity_weight
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -38,7 +38,8 @@ DRIFT_BAND = 0.02
 
 
 def load_log_returns_and_latest_price(ticker: str):
-    d = json.load(open(DATA_DIR / f"{ticker}.json"))
+    with open(DATA_DIR / f"{ticker}.json") as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=ticker)
     s.index = pd.to_datetime(s.index)
     s = s.sort_index()

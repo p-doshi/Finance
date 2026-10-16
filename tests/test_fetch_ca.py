@@ -5,10 +5,10 @@ import pytest
 
 from portfolio_pipeline.data.fetch import DataQualityError
 from portfolio_pipeline.data.fetch_ca import (
-    to_yahoo_symbol,
+    fetch_and_store_ca,
     fetch_raw_yahoo,
     to_stockanalysis_shape,
-    fetch_and_store_ca,
+    to_yahoo_symbol,
 )
 
 
@@ -60,16 +60,16 @@ def test_fetch_raw_yahoo_success():
 
 def test_fetch_raw_yahoo_raises_on_chart_error():
     payload = {"chart": {"error": {"code": "Not Found"}, "result": None}}
-    with patch("portfolio_pipeline.data.fetch_ca.urllib.request.urlopen", return_value=_FakeResponse(payload)):
-        with pytest.raises(DataQualityError, match="Yahoo error"):
-            fetch_raw_yahoo("FAKE", "TSX")
+    with patch("portfolio_pipeline.data.fetch_ca.urllib.request.urlopen", return_value=_FakeResponse(payload)), \
+            pytest.raises(DataQualityError, match="Yahoo error"):
+        fetch_raw_yahoo("FAKE", "TSX")
 
 
 def test_fetch_raw_yahoo_raises_on_empty_result():
     payload = {"chart": {"error": None, "result": []}}
-    with patch("portfolio_pipeline.data.fetch_ca.urllib.request.urlopen", return_value=_FakeResponse(payload)):
-        with pytest.raises(DataQualityError, match="no result"):
-            fetch_raw_yahoo("FAKE", "TSX")
+    with patch("portfolio_pipeline.data.fetch_ca.urllib.request.urlopen", return_value=_FakeResponse(payload)), \
+            pytest.raises(DataQualityError, match="no result"):
+        fetch_raw_yahoo("FAKE", "TSX")
 
 
 def test_to_stockanalysis_shape_converts_and_skips_null_sessions():

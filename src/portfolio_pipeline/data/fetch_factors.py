@@ -21,7 +21,7 @@ import zipfile
 
 import pandas as pd
 
-from .fetch import DataQualityError, USER_AGENT
+from .fetch import USER_AGENT, DataQualityError
 
 FF3_DAILY_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
 FF5_DAILY_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
@@ -49,7 +49,7 @@ def parse_factor_csv(csv_text: str) -> pd.DataFrame:
     deliberately permissive about header/footer text changing slightly
     between releases, strict about what counts as a data row."""
     lines = csv_text.splitlines()
-    header_idx = next((i for i, l in enumerate(lines) if re.match(r"^,\s*\S", l)), None)
+    header_idx = next((i for i, line in enumerate(lines) if re.match(r"^,\s*\S", line)), None)
     if header_idx is None:
         raise DataQualityError("could not find the column-header row in Fama-French CSV")
     columns = [c.strip() for c in lines[header_idx].split(",")][1:]

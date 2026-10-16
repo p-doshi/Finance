@@ -18,9 +18,14 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.optimizers import equal_weight, risk_parity_weight, min_variance_weight, max_sharpe_weight
-from portfolio_pipeline.research.hrp import hrp_weight
 from portfolio_pipeline.research.backtest import walk_forward
+from portfolio_pipeline.research.hrp import hrp_weight
+from portfolio_pipeline.research.optimizers import (
+    equal_weight,
+    max_sharpe_weight,
+    min_variance_weight,
+    risk_parity_weight,
+)
 from portfolio_pipeline.research.overfitting import deflated_sharpe_ratio, probability_of_backtest_overfitting
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
@@ -33,7 +38,8 @@ WINDOW, REBAL_EVERY, COST_BPS = 756, 21, 10.0
 def load_log_returns():
     series = {}
     for t in TICKERS:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()
@@ -83,7 +89,7 @@ def main():
     print("Rule of thumb: DSR > 0.95 is often treated as a reasonable bar given the correction; "
           f"{dsr_result['dsr']:.3f} should be read against that, not against the uncorrected Sharpe.")
 
-    print(f"\n--- Probability of Backtest Overfitting (CSCV) ---")
+    print("\n--- Probability of Backtest Overfitting (CSCV) ---")
     for n_splits in [8, 12] if n_periods % 12 == 0 else [8]:
         if n_periods % n_splits != 0:
             continue

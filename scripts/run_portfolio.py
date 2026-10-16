@@ -14,15 +14,15 @@ import pandas as pd
 from scipy.stats import jarque_bera, kurtosis, skew
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from portfolio_pipeline.research.hrp import hrp_weight
 from portfolio_pipeline.research.optimizers import (
     equal_weight,
     inverse_beta_weight,
-    risk_parity_weight,
-    min_variance_weight,
     max_sharpe_weight,
+    min_variance_weight,
     portfolio_stats,
+    risk_parity_weight,
 )
-from portfolio_pipeline.research.hrp import hrp_weight
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 BETAS = np.array([2.22, 0.21, 0.32, 0.38, 0.58, 0.25, 0.21, 0.91, 0.80, 0.46, 0.38, 1.30])
@@ -34,7 +34,8 @@ RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 def load_prices():
     series = {}
     for t in TICKERS:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()

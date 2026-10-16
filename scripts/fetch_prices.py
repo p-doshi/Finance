@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from portfolio_pipeline.data.fetch import fetch_and_store, DataQualityError
+from portfolio_pipeline.data.fetch import DataQualityError, fetch_and_store
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 

@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.optimizers import risk_parity_weight
 from portfolio_pipeline.research.backtest import walk_forward
+from portfolio_pipeline.research.optimizers import risk_parity_weight
 from portfolio_pipeline.risk.controls import cap_weights, volatility_target_scale
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
@@ -39,7 +39,8 @@ TARGET_VOL = 0.09      # below risk parity's own realized 10.0% (Phase 1), so th
 def load_log_returns():
     series = {}
     for t in TICKERS:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()
@@ -67,7 +68,7 @@ def main():
     print(f"Ann. vol:    baseline {baseline.annualized_vol(PERIODS_PER_YEAR)*100:.2f}% -> "
           f"capped {capped.annualized_vol(PERIODS_PER_YEAR)*100:.2f}%")
 
-    print(f"\n--- 2. Rebalance band (drift_band=3pp) ---")
+    print("\n--- 2. Rebalance band (drift_band=3pp) ---")
     banded = walk_forward(log_ret, rp_fn, window=WINDOW, rebal_every=REBAL_EVERY, cost_bps=COST_BPS,
                            drift_band=0.03)
     print(f"Avg turnover:  no band {baseline.avg_turnover()*100:.1f}%  ->  banded {banded.avg_turnover()*100:.1f}%")

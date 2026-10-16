@@ -1,16 +1,15 @@
 import json
-from io import BytesIO
 from unittest.mock import patch
 
 import pytest
 
 from portfolio_pipeline.data.fetch import DataQualityError
 from portfolio_pipeline.data.universe import (
-    fetch_us_universe,
+    UniverseRow,
     fetch_ca_universe,
     fetch_full_universe,
+    fetch_us_universe,
     screen,
-    UniverseRow,
 )
 
 COLS = ["s", "n", "marketCap", "price", "change", "industry", "volume", "peRatio"]
@@ -63,16 +62,16 @@ def test_fetch_ca_universe_excludes_cdrs_and_strips_prefix():
 
 def test_fetch_raw_rejects_row_count_mismatch():
     payload = {"status": 200, "data": {"count": 99, "columns": COLS, "rows": []}}
-    with patch("portfolio_pipeline.data.universe.urllib.request.urlopen", return_value=_FakeResponse(payload)):
-        with pytest.raises(DataQualityError, match="row-count mismatch"):
-            fetch_us_universe()
+    with patch("portfolio_pipeline.data.universe.urllib.request.urlopen", return_value=_FakeResponse(payload)), \
+            pytest.raises(DataQualityError, match="row-count mismatch"):
+        fetch_us_universe()
 
 
 def test_fetch_raw_rejects_changed_column_layout():
     payload = {"status": 200, "data": {"count": 0, "columns": ["s", "n"], "rows": []}}
-    with patch("portfolio_pipeline.data.universe.urllib.request.urlopen", return_value=_FakeResponse(payload)):
-        with pytest.raises(DataQualityError, match="column layout changed"):
-            fetch_us_universe()
+    with patch("portfolio_pipeline.data.universe.urllib.request.urlopen", return_value=_FakeResponse(payload)), \
+            pytest.raises(DataQualityError, match="column layout changed"):
+        fetch_us_universe()
 
 
 def test_fetch_full_universe_dedupes_across_us_and_ca():

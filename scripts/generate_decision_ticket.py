@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from portfolio_pipeline.decision.trade_ticket import generate_trade_ticket, load_holdings
 from portfolio_pipeline.research.optimizers import risk_parity_weight
-from portfolio_pipeline.decision.trade_ticket import load_holdings, generate_trade_ticket
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -32,7 +32,8 @@ DRIFT_BAND = 0.02  # don't bother trading a name whose dollar drift is under 2% 
 
 
 def load_log_returns_and_latest_price(ticker: str) -> tuple[pd.Series, float]:
-    d = json.load(open(DATA_DIR / f"{ticker}.json"))
+    with open(DATA_DIR / f"{ticker}.json") as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=ticker)
     s.index = pd.to_datetime(s.index)
     s = s.sort_index()
@@ -59,11 +60,11 @@ def main():
     target_w = risk_parity_weight(cov)
     target_weights = dict(zip(TICKERS, target_w.tolist()))
 
-    print(f"Latest prices (most recent close on file):")
+    print("Latest prices (most recent close on file):")
     for t in TICKERS:
         print(f"  {t:6} ${latest_prices[t]:>9.2f}")
 
-    print(f"\nFresh risk-parity target weights (3y window, recomputed now, not a stale table):")
+    print("\nFresh risk-parity target weights (3y window, recomputed now, not a stale table):")
     for t in TICKERS:
         print(f"  {t:6} {target_weights[t]*100:5.1f}%")
 
@@ -77,7 +78,7 @@ def main():
         tgt = target_weights.get(t, 0.0)
         print(f"{t:8}{cur*100:9.1f}%{tgt*100:9.1f}%{(cur-tgt)*100:+9.1f}pp")
 
-    print(f"\n--- TRADE TICKET (enter manually in Wealthsimple -- this script submits nothing) ---")
+    print("\n--- TRADE TICKET (enter manually in Wealthsimple -- this script submits nothing) ---")
     if not ticket["trades"]:
         print("No trades needed: every position is within the drift band of its target.")
     else:

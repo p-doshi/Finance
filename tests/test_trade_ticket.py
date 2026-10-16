@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from portfolio_pipeline.decision.trade_ticket import load_holdings, current_weights, generate_trade_ticket
+from portfolio_pipeline.decision.trade_ticket import current_weights, generate_trade_ticket, load_holdings
 
 
 def test_load_holdings_valid_file(tmp_path):

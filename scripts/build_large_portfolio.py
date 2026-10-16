@@ -17,9 +17,9 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.covariance import sample_covariance, shrunk_covariance, condition_number
-from portfolio_pipeline.research.optimizers import risk_parity_weight, portfolio_stats
+from portfolio_pipeline.research.covariance import condition_number, sample_covariance, shrunk_covariance
 from portfolio_pipeline.research.hrp import hrp_weight
+from portfolio_pipeline.research.optimizers import portfolio_stats, risk_parity_weight
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -34,7 +34,8 @@ def data_path(ticker: str, country: str, exchange: str) -> Path:
 
 
 def load_log_returns(path: Path) -> pd.Series:
-    d = json.load(open(path))
+    with open(path) as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]})
     s.index = pd.to_datetime(s.index)
     return np.log(s.sort_index() / s.sort_index().shift(1)).dropna()
@@ -83,7 +84,8 @@ def build_for_k(ranked: list[dict], k: int):
 
 
 def main():
-    ranked = json.load(open(RESULTS_DIR / "universe_rankings.json"))
+    with open(RESULTS_DIR / "universe_rankings.json") as f:
+        ranked = json.load(f)
     ranked = [r for r in ranked if r.get("n_horizons_used") == 3]
     ranked.sort(key=lambda r: -r["composite_rank"])
 

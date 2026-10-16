@@ -1,10 +1,9 @@
-import json
 from datetime import date, timedelta
 from unittest.mock import patch
 
 import pytest
 
-from portfolio_pipeline.data.fetch import validate, DataQualityError, save_point_in_time
+from portfolio_pipeline.data.fetch import DataQualityError, save_point_in_time, validate
 
 
 def _payload(rows):
@@ -65,7 +64,6 @@ def test_fetch_and_store_passes_through_max_single_day_move(tmp_path):
     not silently ignored elsewhere) when the caller explicitly raises the
     threshold for a more volatile universe — see Stage B's BMNR/DFDV finding
     in docs/methodology.md."""
-    from unittest.mock import patch
     from portfolio_pipeline.data.fetch import fetch_and_store
 
     rows = _good_rows()

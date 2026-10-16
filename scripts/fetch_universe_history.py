@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.data.fetch import fetch_and_store, DataQualityError
+from portfolio_pipeline.data.fetch import DataQualityError, fetch_and_store
 from portfolio_pipeline.data.fetch_ca import fetch_and_store_ca
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,11 +51,13 @@ def main():
                      help="only retry tickers whose previous failure reason (from the saved report) contains this substring")
     args = ap.parse_args()
 
-    universe = json.load(open(RESULTS_DIR / "screened_universe.json"))
+    with open(RESULTS_DIR / "screened_universe.json") as f:
+        universe = json.load(f)
 
     prior = {"ok": [], "skipped_existing": [], "failed": []}
     if REPORT_PATH.exists():
-        prior = json.load(open(REPORT_PATH))
+        with open(REPORT_PATH) as f:
+            prior = json.load(f)
 
     if args.retry_reason:
         wanted = {(f["ticker"], f["exchange"]) for f in prior["failed"] if args.retry_reason in f["reason"]}

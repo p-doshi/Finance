@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.4", "pytest-cov>=4.1", "statsmodels>=0.14"]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "statsmodels>=0.14", "ruff>=0.17"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -25,3 +25,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "SIM"]
+ignore = ["E501"]  # line length handled by judgment, not a hard gate, for docstring-heavy research code

@@ -125,6 +125,7 @@ results/                  — JSON output of the scripts above
 python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
 .venv/bin/python -m pytest -q              # 157 tests, no network needed
+.venv/bin/python -m ruff check src/ tests/ scripts/  # lint (also runs in CI)
 .venv/bin/python scripts/fetch_prices.py   # needs network; pulls 5y history for the watchlist
 .venv/bin/python scripts/run_portfolio.py  # Phase 0: in-sample
 .venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample

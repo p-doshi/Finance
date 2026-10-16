@@ -3,12 +3,12 @@ import pandas as pd
 import pytest
 
 from portfolio_pipeline.research.ic_analysis import (
-    trailing_window_return,
-    forward_window_return,
     composite_momentum_signal,
+    forward_window_return,
     information_coefficient,
     run_ic_study,
     summarize_ic,
+    trailing_window_return,
 )
 
 RNG = np.random.default_rng(55)

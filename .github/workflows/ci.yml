@@ -17,4 +17,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
+      - run: ruff check src/ tests/ scripts/
       - run: pytest -q --cov=portfolio_pipeline --cov-report=term-missing

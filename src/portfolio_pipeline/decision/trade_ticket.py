@@ -24,7 +24,8 @@ class Trade:
 
 
 def load_holdings(path) -> dict:
-    data = json.load(open(path))
+    with open(path) as f:
+        data = json.load(f)
     required = {"cash", "positions"}
     missing = required - data.keys()
     if missing:

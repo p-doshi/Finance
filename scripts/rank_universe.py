@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from portfolio_pipeline.research.screen import score_one, rank_universe
+from portfolio_pipeline.research.screen import rank_universe, score_one
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -30,7 +30,8 @@ def data_path(ticker: str, country: str, exchange: str) -> Path:
 
 
 def load_log_returns(path: Path) -> pd.Series:
-    d = json.load(open(path))
+    with open(path) as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]})
     s.index = pd.to_datetime(s.index)
     s = s.sort_index()
@@ -46,7 +47,8 @@ def main():
         sys.exit(1)
     market_returns = load_log_returns(spy_path)
 
-    universe = json.load(open(RESULTS_DIR / "screened_universe.json"))
+    with open(RESULTS_DIR / "screened_universe.json") as f:
+        universe = json.load(f)
     records, missing = [], 0
     for entry in universe:
         ticker, country, exchange = entry["ticker"], entry["country"], entry["exchange"]
@@ -68,8 +70,6 @@ def main():
     RESULTS_DIR.mkdir(exist_ok=True)
     df.to_json(RESULTS_DIR / "universe_rankings.json", orient="records", indent=2)
 
-    cols = ["ticker", "exchange", "name", "sector", "mom_3m", "mom_6m", "mom_12m",
-            "ann_vol", "beta_vs_spy", "max_drawdown_1y", "n_horizons_used", "composite_rank"]
     full_history_only = df[df["n_horizons_used"] == 3]
 
     print(f"\n--- Top 20 by composite rank (full 3/6/12mo history only, n={len(full_history_only)}) ---")
@@ -78,7 +78,7 @@ def main():
               f"3m={r.mom_3m*100:+6.1f}%  6m={r.mom_6m*100:+6.1f}%  12m={r.mom_12m*100:+6.1f}%  "
               f"vol={r.ann_vol*100:5.1f}%  beta={r.beta_vs_spy:+.2f}  {str(r['name'])[:35]}")
 
-    print(f"\n--- Bottom 20 by composite rank ---")
+    print("\n--- Bottom 20 by composite rank ---")
     for _, r in full_history_only.tail(20).iterrows():
         print(f"  {r.ticker:8} {r.exchange:5} rank={r.composite_rank:5.1f}  "
               f"3m={r.mom_3m*100:+6.1f}%  6m={r.mom_6m*100:+6.1f}%  12m={r.mom_12m*100:+6.1f}%  "

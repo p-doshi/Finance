@@ -9,12 +9,11 @@ import json
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_pipeline.data.fetch_factors import fetch_ff3_daily, fetch_ff5_daily
-from portfolio_pipeline.research.factor_model import factor_regression, annualized_alpha
+from portfolio_pipeline.research.factor_model import annualized_alpha, factor_regression
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -23,7 +22,8 @@ WINDOW_DAYS = 756  # 3y, same base case as Phase 0
 
 
 def load_simple_returns(ticker: str) -> pd.Series:
-    d = json.load(open(DATA_DIR / f"{ticker}.json"))
+    with open(DATA_DIR / f"{ticker}.json") as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=ticker)
     s.index = pd.to_datetime(s.index)
     s = s.sort_index()

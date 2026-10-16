@@ -26,9 +26,12 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_pipeline.research.black_litterman import (
-    implied_risk_aversion, market_implied_returns, black_litterman_posterior, relative_view,
+    black_litterman_posterior,
+    implied_risk_aversion,
+    market_implied_returns,
+    relative_view,
 )
-from portfolio_pipeline.research.optimizers import max_sharpe_weight, risk_parity_weight, portfolio_stats
+from portfolio_pipeline.research.optimizers import max_sharpe_weight, portfolio_stats, risk_parity_weight
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 RF = 0.0426
@@ -40,7 +43,8 @@ WINDOW_DAYS = 756  # 3y, same base case as Phase 0
 def load_log_returns(tickers):
     series = {}
     for t in tickers:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()
@@ -52,7 +56,8 @@ def main():
     log_ret = load_log_returns(TICKERS).tail(WINDOW_DAYS)
     cov = log_ret.cov().values * 252
 
-    universe = json.load(open(RESULTS_DIR / "screened_universe.json"))
+    with open(RESULTS_DIR / "screened_universe.json") as f:
+        universe = json.load(f)
     by_ticker = {e["ticker"]: e for e in universe}
     market_caps = np.array([by_ticker[t]["market_cap"] for t in TICKERS], dtype=float)
     w_mkt = market_caps / market_caps.sum()
@@ -68,7 +73,7 @@ def main():
     print(f"\nImplied risk aversion (delta) from SPY's own 3y Sharpe-like ratio: {delta:.2f}")
 
     pi = market_implied_returns(cov, w_mkt, delta)
-    print(f"\nEquilibrium (implied) returns:")
+    print("\nEquilibrium (implied) returns:")
     for t, p in zip(TICKERS, pi):
         print(f"  {t:6} {p*100:+6.1f}%")
 
@@ -83,7 +88,7 @@ def main():
     P, Q = relative_view(len(TICKERS), TICKERS.index(cheap), TICKERS.index(expensive), outperformance=0.05)
 
     posterior_mean, posterior_cov = black_litterman_posterior(cov, pi, P, Q, tau=0.05)
-    print(f"\nPosterior returns (equilibrium blended with the one view above):")
+    print("\nPosterior returns (equilibrium blended with the one view above):")
     for t, p_prior, p_post in zip(TICKERS, pi, posterior_mean):
         shift = p_post - p_prior
         print(f"  {t:6} prior {p_prior*100:+6.1f}%  ->  posterior {p_post*100:+6.1f}%  (shift {shift*100:+.2f}pp)")
@@ -92,7 +97,7 @@ def main():
     w_bl_rp = risk_parity_weight(posterior_cov)  # risk parity doesn't use the view's return at all, only cov -- included for contrast
     stats_bl_sharpe = portfolio_stats(w_bl_sharpe, posterior_cov, posterior_mean, RF)
 
-    print(f"\n--- Weights: market-cap vs. BL-max-Sharpe vs. BL-risk-parity ---")
+    print("\n--- Weights: market-cap vs. BL-max-Sharpe vs. BL-risk-parity ---")
     print(f"{'Ticker':7}{'Mkt-cap wt':>12}{'BL max-Sharpe':>15}{'BL risk-parity':>16}")
     for i, t in enumerate(TICKERS):
         print(f"{t:7}{w_mkt[i]*100:11.1f}%{w_bl_sharpe[i]*100:14.1f}%{w_bl_rp[i]*100:15.1f}%")

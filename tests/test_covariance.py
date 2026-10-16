@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from portfolio_pipeline.research.covariance import sample_covariance, shrunk_covariance, condition_number
+from portfolio_pipeline.research.covariance import condition_number, sample_covariance, shrunk_covariance
 
 RNG = np.random.default_rng(7)
 

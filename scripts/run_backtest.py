@@ -17,14 +17,14 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from portfolio_pipeline.research.backtest import block_bootstrap_ci, walk_forward
+from portfolio_pipeline.research.hrp import hrp_weight
 from portfolio_pipeline.research.optimizers import (
     equal_weight,
-    risk_parity_weight,
-    min_variance_weight,
     max_sharpe_weight,
+    min_variance_weight,
+    risk_parity_weight,
 )
-from portfolio_pipeline.research.hrp import hrp_weight
-from portfolio_pipeline.research.backtest import walk_forward, block_bootstrap_ci
 
 TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"]
 RF = 0.0426
@@ -41,7 +41,8 @@ BOOTSTRAP_SEED = 20261015  # fixed, so every CI here is exactly reproducible
 def load_log_returns():
     series = {}
     for t in TICKERS:
-        d = json.load(open(DATA_DIR / f"{t}.json"))
+        with open(DATA_DIR / f"{t}.json") as f:
+            d = json.load(f)
         s = pd.Series({r["t"]: r["a"] for r in d["data"]}, name=t)
         s.index = pd.to_datetime(s.index)
         series[t] = s.sort_index()

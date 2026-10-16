@@ -37,7 +37,7 @@ import json
 import urllib.request
 from dataclasses import dataclass
 
-from .fetch import DataQualityError, USER_AGENT
+from .fetch import USER_AGENT, DataQualityError
 
 SCREENER_URL = "https://stockanalysis.com/_api/endpoints/screener/initial?type=stock&countryCode={country}&format=compact"
 

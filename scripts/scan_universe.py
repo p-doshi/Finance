@@ -29,7 +29,7 @@ def main():
           f"({len(screened) / len(rows):.1%} of full universe)")
 
     sector_counts = Counter(r.sector for r in screened if r.sector)
-    print(f"\nTop 10 sectors/industries in screened universe:")
+    print("\nTop 10 sectors/industries in screened universe:")
     for sector, n in sector_counts.most_common(10):
         print(f"  {sector:40} {n:5}")
 
@@ -37,16 +37,16 @@ def main():
     gainers = sorted(with_change, key=lambda r: r.day_change_pct, reverse=True)[:15]
     losers = sorted(with_change, key=lambda r: r.day_change_pct)[:15]
 
-    print(f"\nTop 15 gainers today (screened universe):")
+    print("\nTop 15 gainers today (screened universe):")
     for r in gainers:
         print(f"  {r.ticker:8} {r.exchange:5} {r.day_change_pct:+6.2f}%  {r.name[:40]:40} mktcap=${r.market_cap/1e9:7.2f}B")
 
-    print(f"\nTop 15 losers today (screened universe):")
+    print("\nTop 15 losers today (screened universe):")
     for r in losers:
         print(f"  {r.ticker:8} {r.exchange:5} {r.day_change_pct:+6.2f}%  {r.name[:40]:40} mktcap=${r.market_cap/1e9:7.2f}B")
 
     by_mcap = sorted(screened, key=lambda r: r.market_cap or 0, reverse=True)[:15]
-    print(f"\nTop 15 by market cap:")
+    print("\nTop 15 by market cap:")
     for r in by_mcap:
         print(f"  {r.ticker:8} {r.exchange:5} ${r.market_cap/1e9:9.1f}B  {r.name[:40]}")
 

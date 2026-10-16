@@ -20,7 +20,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_pipeline.research.ic_analysis import (
-    run_ic_study, summarize_ic, composite_momentum_signal, forward_window_return,
+    composite_momentum_signal,
+    forward_window_return,
+    run_ic_study,
+    summarize_ic,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,14 +39,16 @@ def data_path(ticker: str, country: str, exchange: str) -> Path:
 
 
 def load_adj_close(path: Path) -> pd.Series:
-    d = json.load(open(path))
+    with open(path) as f:
+        d = json.load(f)
     s = pd.Series({r["t"]: r["a"] for r in d["data"]})
     s.index = pd.to_datetime(s.index)
     return s.sort_index()
 
 
 def main():
-    universe = json.load(open(RESULTS_DIR / "screened_universe.json"))
+    with open(RESULTS_DIR / "screened_universe.json") as f:
+        universe = json.load(f)
     # US-only: mixing US and Canadian tickers in one outer-joined panel means
     # every US-market holiday (Thanksgiving, July 4th, MLK Day, ...) becomes a
     # row where literally every US ticker is NaN (because TSX traded that day),
@@ -93,7 +98,7 @@ def main():
     # a well-known SHORT-TERM REVERSAL effect that can swamp momentum at 1-month forward horizons,
     # with the classic positive-momentum regime more associated with 3-12 month formation/holding.
     # Testing only 21d and calling it done would risk testing the wrong regime, not a null result.
-    print(f"\n--- IC by forward horizon (fair test — momentum literature flags 1mo short-term reversal) ---")
+    print("\n--- IC by forward horizon (fair test — momentum literature flags 1mo short-term reversal) ---")
     horizon_summaries = {}
     for h, label in [(21, "1mo"), (63, "3mo"), (126, "6mo")]:
         s = run_ic_study(log_ret, horizon=h, snapshot_every=SNAPSHOT_EVERY, min_lookback=MIN_LOOKBACK)
@@ -103,7 +108,7 @@ def main():
               f"se={summ['se_ic']:.4f}  t={summ['t_stat']:+.2f}  n_snapshots={summ['n_snapshots']}")
 
     # Decile analysis: does average forward return increase monotonically with signal decile?
-    print(f"\n--- Decile analysis (pooled across all snapshots) ---")
+    print("\n--- Decile analysis (pooled across all snapshots) ---")
     pooled = []
     for as_of_idx in range(MIN_LOOKBACK, len(log_ret) - HORIZON, SNAPSHOT_EVERY):
         signal = composite_momentum_signal(log_ret, as_of_idx)

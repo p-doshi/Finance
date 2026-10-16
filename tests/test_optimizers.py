@@ -5,14 +5,14 @@ import pytest
 from scipy.optimize import OptimizeResult
 
 from portfolio_pipeline.research.optimizers import (
-    equal_weight,
-    inverse_beta_weight,
-    risk_parity_weight,
-    min_variance_weight,
-    max_sharpe_weight,
-    portfolio_stats,
     _risk_contributions,
     _robust_minimize,
+    equal_weight,
+    inverse_beta_weight,
+    max_sharpe_weight,
+    min_variance_weight,
+    portfolio_stats,
+    risk_parity_weight,
 )
 
 N = 6
@@ -124,9 +124,9 @@ def test_robust_minimize_raises_if_every_attempt_fails():
     bounds = [(0.0, 1.0)] * n
     cons = [{"type": "eq", "fun": lambda w: w.sum() - 1.0}]
     always_fail = OptimizeResult(x=equal_weight(n), success=False, fun=np.nan, message="nope")
-    with patch("portfolio_pipeline.research.optimizers.minimize", return_value=always_fail):
-        with pytest.raises(RuntimeError, match="all .* restarts failed"):
-            _robust_minimize(lambda w: w @ w, n, bounds, cons)
+    with patch("portfolio_pipeline.research.optimizers.minimize", return_value=always_fail), \
+            pytest.raises(RuntimeError, match="all .* restarts failed"):
+        _robust_minimize(lambda w: w @ w, n, bounds, cons)
 
 
 def test_portfolio_stats_n_effective_bounds(cov, mu):

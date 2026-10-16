@@ -43,7 +43,6 @@ def factor_regression(excess_returns: pd.Series, factors: pd.DataFrame) -> dict:
     X_factors = aligned.iloc[:, 1:].values
     factor_names = list(factors.columns)
     n = len(y)
-    k = X_factors.shape[1]
     X = np.column_stack([np.ones(n), X_factors])
 
     beta_hat, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
