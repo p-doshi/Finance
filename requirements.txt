@@ -1,9 +1,0 @@
-# Minimal runtime dependencies for the Vercel Python service (app.py).
-# Deliberately NOT the full dev pyproject.toml extras (pytest, ruff,
-# quantstats, matplotlib, statsmodels, scikit-learn) -- those are for local
-# research/testing, not needed to serve a backtest over HTTP, and would
-# bloat the deployed function's bundle/cold-start time for no reason.
-fastapi==0.117.1
-numpy>=1.26
-scipy>=1.11
-pandas>=2.0
