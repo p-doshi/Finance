@@ -21,6 +21,42 @@ https://claude.ai/artifact/P2j9A38vV7haiYe3AiCS3w
 **Full methodology, data sources, assumption checks, and results:**
 [docs/methodology.md](docs/methodology.md)
 
+## Key findings
+
+- **Overfitting, demonstrated rather than asserted.** The method that
+  looked best in-sample (max-Sharpe, Sharpe 2.14) was the *worst*
+  performer out-of-sample on every metric checked — return, Sortino,
+  Calmar, drawdown, CVaR ([§5](docs/methodology.md#5-phase-1--walk-forward-out-of-sample-backtest)).
+- **Deflated Sharpe Ratio and Probability of Backtest Overfitting,
+  applied, not just implemented.** DSR = 0.956 (clears the standard bar —
+  real skill likely exists somewhere in the 5-method comparison) while
+  PBO = 0.81–0.85 (picking *which* method is best doesn't transfer across
+  sub-samples). Not a contradiction — two different, correctly-reasoned-
+  through questions ([§7](docs/methodology.md#deflated-sharpe-ratio-and-probability-of-backtest-overfitting-researchoverfittingpy)).
+- **A momentum ranking signal validated and found wanting — reported
+  anyway.** Alphalens-style IC analysis on the 3,700-name screener found
+  no demonstrated forward-predictive skill (IC ≈ 0 at 1–3mo horizons),
+  stated plainly in the docs and README rather than left out
+  ([§7](docs/methodology.md#information-coefficient-validation-of-the-stage-b-ranker--a-humbling-important-finding)).
+- **Three real bugs found by cross-checking against independent tools,
+  not by code review alone.** A `max_drawdown` bug (never anchored to
+  starting equity, understated every drawdown) found via quantstats,
+  matched to 9 decimal places after the fix. A turnover bug (computed
+  against stale targets, not actual drift) found building the rebalance
+  band. Two separate CDR data-quality bugs in the market scan — one by
+  prefix, one subtler one caught only because a reported market cap was
+  internally inconsistent with the real listing.
+- **Shrinkage and Hierarchical Risk Parity, checked at the exact point
+  they're supposed to matter.** At 300 assets vs. 199 observations,
+  sample covariance's condition number comes back as -1.26×10¹⁶
+  (mathematically singular); Ledoit-Wolf shrinkage keeps it at 137.9, and
+  HRP (which never inverts the covariance matrix) produces a valid
+  portfolio where matrix-inversion-based methods would hard-fail.
+- **A hand-implemented OLS factor regression cross-validated against
+  `statsmodels.OLS`** to 1e-10 precision, not just assumed correct.
+- **162 tests, 96% coverage, CI-gated lint, 15 commits** of incremental,
+  individually-documented work — not one large undifferentiated drop.
+
 ## Architecture
 
 ```
