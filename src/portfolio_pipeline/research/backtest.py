@@ -123,6 +123,7 @@ def walk_forward(
     rebal_every: int = 21,
     cost_bps: float = 10.0,
     method_name: str = "method",
+    drift_band: float | None = None,
 ) -> BacktestResult:
     """
     log_returns: DataFrame, rows = trading days (ascending), cols = tickers.
@@ -132,6 +133,20 @@ def walk_forward(
     window: trading days of trailing history used to estimate each rebalance.
     rebal_every: trading days held before re-estimating and rebalancing.
     cost_bps: one-way transaction cost in basis points, applied to turnover.
+    drift_band: if set, skip rebalancing at a given date when the proposed
+        new target doesn't differ from the *actual, drifted* current
+        holdings by more than this much on any single name — avoids
+        trading on noise-level drift. None (default) always rebalances to
+        the new target every `rebal_every` days.
+
+    Turnover is computed against the actual drifted holdings at the start
+    of each rebalance date, not the previous period's un-drifted target —
+    a buy-and-hold position doesn't stay at its target weights between
+    rebalances (a winner's weight rises on its own), so comparing a new
+    target only to the stale old target understates real-world turnover.
+    Found and fixed together with adding `drift_band` (the band logic
+    needs real drift tracked anyway) — see docs/methodology.md for the
+    effect size on previously-published turnover figures.
     """
     n_days, n_assets = log_returns.shape
     rebal_idx = list(range(window, n_days, rebal_every))
@@ -139,11 +154,17 @@ def walk_forward(
         raise ValueError(f"not enough history for window={window}, rebal_every={rebal_every}, n_days={n_days}")
 
     dates, weights_list, period_rets, turnovers, costs = [], [], [], [], []
-    prev_w = None
+    actual_weights = None  # drifted holdings carried from the end of the previous period
     for k, i in enumerate(rebal_idx):
         trailing = log_returns.iloc[i - window:i]
-        w = np.asarray(weight_fn(trailing), dtype=float)
-        assert abs(w.sum() - 1.0) < 1e-4, f"weights must sum to 1, got {w.sum()}"
+        target_w = np.asarray(weight_fn(trailing), dtype=float)
+        assert abs(target_w.sum() - 1.0) < 1e-4, f"weights must sum to 1, got {target_w.sum()}"
+
+        if drift_band is not None and actual_weights is not None and \
+                np.abs(actual_weights - target_w).max() <= drift_band:
+            w = actual_weights  # drift within band -- hold, don't trade
+        else:
+            w = target_w
 
         j = rebal_idx[k + 1] if k + 1 < len(rebal_idx) else n_days
         holding = log_returns.iloc[i:j]
@@ -152,15 +173,21 @@ def walk_forward(
         port_simple_ret = float(w @ simple_asset_ret)
         port_log_ret = np.log1p(port_simple_ret)
 
-        turnover = float(np.abs(w - prev_w).sum()) if prev_w is not None else float(np.abs(w).sum())
+        turnover = float(np.abs(w - actual_weights).sum()) if actual_weights is not None else float(np.abs(w).sum())
         cost = turnover * cost_bps / 1e4
+
+        # drift the just-used weights forward through the holding period's
+        # realized returns -- this (not `w` itself) is what's actually held
+        # going into the next rebalance decision
+        drifted = w * (1 + simple_asset_ret)
+        drifted_sum = drifted.sum()
+        actual_weights = drifted / drifted_sum if drifted_sum != 0 else w
 
         dates.append(log_returns.index[i])
         weights_list.append(w)
         period_rets.append(port_log_ret)
         turnovers.append(turnover)
         costs.append(cost)
-        prev_w = w
 
     return BacktestResult(
         method=method_name,

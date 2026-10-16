@@ -1,0 +1,26 @@
+{
+  "position_cap": {
+    "cap": 0.095,
+    "max_weight_baseline": 0.12707629814170052,
+    "max_weight_capped": 0.095,
+    "ann_return_baseline": 0.14782273656369796,
+    "ann_return_capped": 0.14423377295657164
+  },
+  "rebalance_band": {
+    "band": 0.03,
+    "avg_turnover_baseline": 0.08890745060632817,
+    "avg_turnover_banded": 0.05622154474606738,
+    "ann_return_baseline": 0.14782273656369796,
+    "ann_return_banded": 0.14641858843620784
+  },
+  "vol_targeting": {
+    "target_vol": 0.09,
+    "scale_mean": 0.7940385064497736,
+    "scale_min": 0.6930497298626058,
+    "scale_max": 0.8697512717693311,
+    "realized_vol_before": 0.09998656538325412,
+    "realized_vol_after": 0.08259687828220369,
+    "ann_return_before": 0.14782273656369796,
+    "ann_return_after": 0.12189768897441043
+  }
+}

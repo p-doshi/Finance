@@ -1,29 +1,29 @@
 {
   "n_periods": 24,
   "sharpes_by_method": {
-    "equal_weight": 0.399021106638233,
-    "risk_parity": 0.3991696041825659,
-    "hrp": 0.3876148802840914,
-    "min_variance": 0.37062587319179446,
-    "max_sharpe": 0.31348769141477
+    "equal_weight": 0.3973935319562987,
+    "risk_parity": 0.3980408631446445,
+    "hrp": 0.38702996879814117,
+    "min_variance": 0.37029424723668647,
+    "max_sharpe": 0.3142304764577498
   },
   "best_method": "risk_parity",
   "deflated_sharpe": {
     "best_trial": "risk_parity",
-    "sr_hat": 0.3991696041825659,
+    "sr_hat": 0.3980408631446445,
     "n_trials": 5,
-    "sharpe_variance_across_trials": 0.00127951315803279,
-    "sr_benchmark_expected_max_under_null": 0.04265942512265559,
-    "skewness": 0.25147475630456856,
-    "kurtosis_raw": 3.5513127651666,
+    "sharpe_variance_across_trials": 0.0012198289885792329,
+    "sr_benchmark_expected_max_under_null": 0.04165259805020794,
+    "skewness": 0.2512670785003135,
+    "kurtosis_raw": 3.550751336663201,
     "n_obs": 24,
-    "dsr": 0.9562464300510999,
+    "dsr": 0.956210429262462,
     "trial_sharpes": {
-      "equal_weight": 0.399021106638233,
-      "risk_parity": 0.3991696041825659,
-      "hrp": 0.3876148802840914,
-      "min_variance": 0.37062587319179446,
-      "max_sharpe": 0.31348769141477
+      "equal_weight": 0.3973935319562987,
+      "risk_parity": 0.3980408631446445,
+      "hrp": 0.38702996879814117,
+      "min_variance": 0.37029424723668647,
+      "max_sharpe": 0.3142304764577498
     }
   },
   "pbo": {
@@ -34,10 +34,10 @@
       "logits_mean": -0.418181667493755
     },
     "12": {
-      "pbo": 0.8452380952380952,
+      "pbo": 0.8506493506493507,
       "n_combinations": 924,
       "n_splits": 12,
-      "logits_mean": -0.6712584051017306
+      "logits_mean": -0.7163491645864324
     }
   }
 }

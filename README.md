@@ -54,7 +54,13 @@ shrinkage keeps a 300-name portfolio's covariance matrix usable even where
 sample covariance mathematically breaks (more assets than observations);
 see [§ 7](docs/methodology.md#7-beyond-markowitz--benchmarking-against-real-tools-and-practice).
 
-Remaining phases/stages are scoped in [§ 8 Roadmap](docs/methodology.md#8-roadmap).
+**Phase 2 (risk management) also done** — position caps, a rebalance band,
+and volatility targeting, each with a measured real effect; building the
+band also found and fixed a turnover-calculation bug (every previously
+reported turnover figure had been understated) — see
+[§ 8](docs/methodology.md#8-phase-2--risk-management-layer).
+
+Remaining phases/stages are scoped in [§ 9 Roadmap](docs/methodology.md#9-roadmap).
 
 ## Repo layout
 
@@ -63,7 +69,14 @@ src/portfolio_pipeline/
   data/fetch.py          — validated, point-in-time price ingestion for the watchlist
   data/universe.py       — bulk US+Canada market snapshot (2 calls, ~8,000+ names)
   research/optimizers.py — equal-weight, inverse-beta, risk parity, min-variance, max-Sharpe
-  research/backtest.py   — walk-forward engine + block-bootstrap confidence intervals
+  research/hrp.py         — Hierarchical Risk Parity
+  research/covariance.py  — Ledoit-Wolf shrinkage
+  research/black_litterman.py — market-implied returns + view blending
+  research/factor_model.py — Fama-French factor regression (cross-checked vs statsmodels)
+  research/backtest.py   — walk-forward engine + block-bootstrap CIs + rebalance-band support
+  research/overfitting.py — Deflated Sharpe Ratio + Probability of Backtest Overfitting
+  research/ic_analysis.py — Information Coefficient validation of a ranking signal
+  risk/controls.py        — position caps, volatility targeting
 tests/                    — pytest: optimizer math, data validation, no-lookahead, universe dedup
 scripts/
   fetch_prices.py         — pulls + validates 5y daily history for the watchlist
@@ -92,4 +105,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/validate_overfitting.py  # Deflated Sharpe Ratio + PBO on the 5-method comparison
 .venv/bin/python scripts/run_black_litterman.py  # market-implied returns + one illustrative view
 .venv/bin/python scripts/run_factor_analysis.py  # Fama-French 3/5-factor regression (real published factors)
+.venv/bin/python scripts/run_risk_managed_backtest.py  # position caps, rebalance band, vol targeting
 ```

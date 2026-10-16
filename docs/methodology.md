@@ -214,23 +214,33 @@ be read that way — wide bands, not a verdict.
 
 | Method | Ann. return (net) | Ann. vol | Sharpe | Sortino | Calmar | Max drawdown | Avg turnover |
 |---|---|---|---|---|---|---|---|
-| Equal weight | 15.45% | 10.40% | 1.08 | 2.14 | 2.79 | -5.55% | 4.2% |
-| Risk parity | 14.83% | 10.00% | 1.06 | 2.17 | 2.67 | -5.56% | 5.6% |
-| HRP | 13.49% | 9.42% | 0.98 | 2.03 | 2.42 | -5.58% | 13.6% |
-| Min variance | 15.82% | 11.44% | 1.01 | 2.15 | 2.03 | -7.81% | 11.4% |
-| Max Sharpe | 11.70% | 10.19% | 0.73 | 1.23 | 1.34 | -8.72% | 28.9% |
+| Equal weight | 15.38% | 10.40% | 1.07 | 2.12 | 2.76 | -5.57% | 9.2% |
+| Risk parity | 14.78% | 10.00% | 1.05 | 2.15 | 2.65 | -5.57% | 8.9% |
+| HRP | 13.46% | 9.42% | 0.98 | 2.03 | 2.41 | -5.59% | 15.3% |
+| Min variance | 15.80% | 11.44% | 1.01 | 2.15 | 2.02 | -7.81% | 12.5% |
+| Max Sharpe | 11.72% | 10.18% | 0.73 | 1.23 | 1.35 | -8.70% | 27.0% |
 
-*(Max drawdown corrected from an earlier published version of this table,
-which understated every method's drawdown by failing to anchor the
-return series to a starting equity of 1.0 before the first period — see
-§7's quantstats tearsheet section for how this was found and fixed. The
-correction makes the "max-Sharpe is worse" finding below stronger, not
-weaker: its real drawdown is -8.72%, not the originally-reported -7.18%.)*
+*(Two corrections from earlier published versions of this table, both
+found via the same kind of cross-check — look for a second, independent
+way to verify a number before trusting it. Max drawdown: originally
+understated every method's drawdown by failing to anchor the return
+series to a starting equity of 1.0 before the first period — see §7's
+quantstats section. Turnover: originally computed each rebalance's trade
+size against the *previous period's stale target* rather than the
+portfolio's actual drifted holdings — a buy-and-hold position doesn't
+stay at its target weights between rebalances, so that understated real
+turnover too (equal-weight's measured turnover roughly doubled, 4.2% to
+9.2%, once drift is tracked correctly — see §8 on `drift_band` for where
+this was found). Net-of-cost returns and Sharpe moved only in the second
+decimal place at this project's 10bps cost assumption — small at this
+cost level, but the turnover figures themselves are a real, meaningful
+correction, and at a higher assumed cost the net-return effect would be
+larger.)*
 
 **The method that looked best in-sample (Phase 0: max-Sharpe, Sharpe 2.14) is
 the worst performer out-of-sample** on every metric here — lowest return,
 worst Sortino, worst Calmar, worst drawdown, and by far the highest turnover
-(28.9% average, vs. 4–14% for the others), which also means it eats the
+(27.0% average, vs. 9–15% for the others), which also means it eats the
 most transaction-cost drag. This is overfitting shown directly: the
 expected-return estimate max-Sharpe leans on is noisy enough that
 optimizing hard against it in-sample doesn't transfer forward. HRP, added
@@ -259,15 +269,16 @@ what 2 years of monthly data can support.
 | Cost (bps, one-way) | Risk parity ann. return | HRP ann. return | Max Sharpe ann. return |
 |---|---|---|---|
 | 0 | 14.90% | 13.67% | 12.09% |
-| 10 | 14.83% | 13.49% | 11.70% |
-| 25 | 14.71% | 13.21% | 11.12% |
-| 50 | 14.52% | 12.75% | 10.16% |
+| 10 | 14.78% | 13.46% | 11.72% |
+| 25 | 14.60% | 13.15% | 11.18% |
+| 50 | 14.29% | 12.63% | 10.29% |
 
-Risk parity's low turnover (5.6% average) makes it nearly cost-insensitive;
-max-Sharpe's high turnover (28.9%) means realistic trading costs erode almost
-2 full points of annual return between 0 and 50bps. HRP sits in between —
-more cost-sensitive than risk parity (its clustering-based rebalancing
-trades more, 13.6% average turnover), but nowhere near max-Sharpe's drag.
+Risk parity's lower turnover (8.9% average) makes it less cost-sensitive;
+max-Sharpe's high turnover (27.0%) means realistic trading costs erode
+nearly 2 full points of annual return between 0 and 50bps. HRP sits in
+between — more cost-sensitive than risk parity (its clustering-based
+rebalancing trades more, 15.3% average turnover), but nowhere near
+max-Sharpe's drag.
 
 ### Window-length sensitivity: the ranking itself isn't stable
 
@@ -279,8 +290,8 @@ trails risk parity's (1.92) because of higher volatility.
 
 | Window | Equal wt | Risk parity | HRP | Min variance | Max Sharpe |
 |---|---|---|---|---|---|
-| 2y (36 periods) | 24.63% / Sharpe 1.90 | 22.66% / Sharpe 1.92 | 21.29% / Sharpe 1.83 | 21.53% / Sharpe 1.75 | 26.96% / Sharpe 1.48 |
-| 3y (24 periods) | 15.45% / Sharpe 1.08 | 14.83% / Sharpe 1.06 | 13.49% / Sharpe 0.98 | 15.82% / Sharpe 1.01 | 11.70% / Sharpe 0.73 |
+| 2y (36 periods) | 24.55% / Sharpe 1.89 | 22.62% / Sharpe 1.92 | 21.28% / Sharpe 1.83 | 21.52% / Sharpe 1.75 | 26.98% / Sharpe 1.48 |
+| 3y (24 periods) | 15.38% / Sharpe 1.07 | 14.78% / Sharpe 1.05 | 13.46% / Sharpe 0.98 | 15.80% / Sharpe 1.01 | 11.72% / Sharpe 0.73 |
 
 **Which method "wins" depends on which historical window you test over as
 much as it depends on the method itself.** That's a real finding, not a
@@ -518,8 +529,8 @@ locks this in without depending on live data.
 
 **Honest negative finding at small N:** added to the 12-stock walk-forward
 backtest (§5) too, where the result is the opposite of a sales pitch — HRP
-underperforms plain risk parity out-of-sample (Sharpe 0.98 vs. 1.06) with
-*higher* turnover (13.6% vs. 5.6%), not lower. This tracks the theory
+underperforms plain risk parity out-of-sample (Sharpe 0.98 vs. 1.05) with
+*higher* turnover (15.3% vs. 8.9%), not lower. This tracks the theory
 rather than contradicting it: HRP's advantage is specifically about
 robustness under a noisy or ill-conditioned covariance matrix, and 12
 assets with 756 observations was already well-conditioned in Phase 0
@@ -794,7 +805,64 @@ the source's own update cadence (through 2026-08-31 as of this project's
 October 2026 data, a ~6-week lag) — inherent to the source, not a fetch
 failure.
 
-## 8. Roadmap
+## 8. Phase 2 — risk management layer
+
+Three controls (`risk/controls.py`, `research/backtest.py`'s `drift_band`
+parameter), each demonstrated with a measurable real effect on the actual
+12-stock backtest (`scripts/run_risk_managed_backtest.py`), not left as
+untested library functions.
+
+### A turnover/drift bug found building the rebalance band
+
+Implementing `drift_band` required tracking each period's *actual drifted
+holdings* (a buy-and-hold position doesn't stay at its target weights
+between rebalances — a winner's weight rises on its own). Building that
+exposed that **every previously-published turnover figure in this project
+had been understated**: turnover was computed against the previous
+period's stale target weight, not the portfolio's real drifted position
+at the start of the next rebalance. Fixed together with adding the band
+(same drift-tracking machinery serves both); net-of-cost returns and
+Sharpe moved only in the second decimal place at this project's assumed
+10bps cost (see the corrected table in §5), but the turnover figures
+themselves changed meaningfully — equal-weight's measured turnover
+roughly doubled, 4.2% to 9.2%. A dedicated regression test
+(`tests/test_backtest.py::test_turnover_reflects_real_drift_even_with_a_constant_target`)
+hand-computes one period's expected turnover from real drift and checks
+it directly, and a companion test confirms `drift_band` actually
+suppresses trading once it's wide enough.
+
+### Three controls, three measured effects (risk parity, 3y window, same backtest as §5)
+
+**1. Position cap (10%, feasible for 12 names since 12×8%<100% would make
+a tighter cap mathematically impossible — caught by `cap_weights`'s own
+feasibility check before it could silently misbehave):** max single-name
+weight held across the backtest drops from 12.7% to 9.5%, at a small cost
+(ann. return 14.78% → 14.42%, vol 10.00% → 9.91%). Bounded concentration,
+not free — exactly the trade a cap is supposed to make.
+
+**2. Rebalance band (3 percentage points) — the most striking of the
+three:** of the 23 rebalance dates after the first, the no-band policy
+traded at **all 23**; the banded policy traded at only **3**. Turnover
+nearly halved (8.9% → 5.6%) for a return cost of 14 basis points (14.78%
+→ 14.64%). This says something concrete about monthly rebalancing without
+a band: most of what looks like "keeping the portfolio on target" is
+actually trading on noise-level drift that a modest band would have
+ignored for free.
+
+**3. Volatility targeting (9% target, capped at 100% risky exposure — no
+margin, unlike AQR's levered risk-parity funds, since a retail account
+doesn't have that lever):** scaled risky exposure averaged 79% of the
+portfolio (range 69%–87%) across the 24 periods, bringing realized
+annualized vol from 10.00% down to 8.26% (close to, not exactly, the 9%
+target — ex-ante covariance-implied vol is an imperfect predictor of what
+actually realizes) at the cost of giving up return (14.78% → 12.19%).
+De-risking is not a free lunch, and this doesn't pretend otherwise.
+Caveat stated in the script's own output: this scales realized returns by
+each period's ex-ante vol estimate rather than fully re-simulating a
+cash/risky rebalancing with its own transaction costs — directionally
+right, not a precision instrument.
+
+## 9. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
    data ingestion.
@@ -803,8 +871,9 @@ failure.
 2. **Transaction-cost / turnover modeling** (done as part of Phase 1 — cost
    sensitivity table above) — could still extend to a market-impact model
    for larger position sizes, not needed at retail scale.
-3. **Risk management layer** — position caps, volatility targeting,
-   rebalance bands (don't trade on noise-level drift).
+3. **Risk management layer** (done) — position caps, volatility targeting,
+   rebalance bands. Found and fixed a real turnover-calculation bug along
+   the way. See §8.
 4. **Decision layer** — compares manually-entered current holdings against
    target weights, outputs a trade ticket in whole shares. (No safe
    programmatic read path into Wealthsimple either, by the same ToS/IIROC
@@ -815,7 +884,7 @@ failure.
 6. **Paper-trade validation + write-up** — run in parallel against a free
    Alpaca/IBKR paper account before trusting it for manual real trades.
 
-## 9. Reproducing this
+## 10. Reproducing this
 
 ```bash
 python3 -m venv .venv

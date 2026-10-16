@@ -55,14 +55,50 @@ def _constant_weight_fn(w):
     return fn
 
 
-def test_turnover_zero_after_first_period_when_weights_constant():
+def test_turnover_reflects_real_drift_even_with_a_constant_target():
+    """A constant equal-weight TARGET still has real turnover every period:
+    the portfolio drifts away from equal-weight during each holding period
+    (different assets have different returns), and rebalancing back to the
+    target requires actually trading that drift away. Turnover is
+    computed against the drifted holdings, not the stale prior target --
+    verified directly against a hand-computed drift for period 2, not just
+    'it's nonzero'."""
     data = _synthetic_returns()
     w = equal_weight(N_ASSETS)
     res = walk_forward(data, _constant_weight_fn(w), window=252, rebal_every=21)
-    # first rebalance: turnover vs an implicit all-cash start = sum(|w|) = 1
-    assert res.turnover[0] == pytest.approx(1.0, abs=1e-6)
-    # every subsequent rebalance: weights didn't change -> zero turnover
-    assert np.allclose(res.turnover[1:], 0.0, atol=1e-8)
+    assert res.turnover[0] == pytest.approx(1.0, abs=1e-6)  # period 0: vs. implicit all-cash start
+    assert np.all(res.turnover[1:] > 0)  # real drift every period after -> real turnover
+
+    # hand-check period 1's turnover: drift period 0's equal weights through
+    # period 0's realized per-asset returns, compare to period 1's target (= w again)
+    i0 = res.dates[0]
+    idx0 = data.index.get_loc(i0)
+    idx1 = data.index.get_loc(res.dates[1])
+    holding0 = data.iloc[idx0:idx1]
+    simple_ret0 = np.expm1(holding0.sum(axis=0).values)
+    drifted = w * (1 + simple_ret0)
+    drifted /= drifted.sum()
+    expected_turnover1 = np.abs(w - drifted).sum()
+    assert res.turnover[1] == pytest.approx(expected_turnover1, abs=1e-8)
+
+
+def test_drift_band_suppresses_rebalancing_within_the_band():
+    """The actual point of drift_band: if the drifted holdings haven't
+    moved far from the (constant) target, don't trade at all -- turnover
+    should drop to zero once the band is wide enough to tolerate the real
+    drift this data produces."""
+    data = _synthetic_returns()
+    w = equal_weight(N_ASSETS)
+    no_band = walk_forward(data, _constant_weight_fn(w), window=252, rebal_every=21)
+    max_drift_seen = no_band.turnover[1:].max()  # generous upper bound on any single period's drift
+
+    wide_band = walk_forward(data, _constant_weight_fn(w), window=252, rebal_every=21,
+                              drift_band=max_drift_seen + 1.0)
+    assert wide_band.turnover[0] == pytest.approx(1.0, abs=1e-6)  # still must enter the position initially
+    assert np.allclose(wide_band.turnover[1:], 0.0, atol=1e-8)  # never worth trading given the band
+    # holding the drifted (not reset) weights should change the realized returns
+    # versus always-rebalance -- a real, checkable difference, not just zero turnover
+    assert not np.allclose(wide_band.period_returns, no_band.period_returns)
 
 
 def test_cost_proportional_to_turnover_and_bps():
