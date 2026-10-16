@@ -36,12 +36,18 @@ the *worst* performer out-of-sample, and that no method is statistically
 distinguishable from the others given ~2 years of out-of-sample data — see
 [docs/methodology.md § 5](docs/methodology.md#5-phase-1--walk-forward-out-of-sample-backtest).
 
-**Market-wide screener track: Stages A–B complete.** 8,356 US+Canada
-companies scanned, 3,954 survive a liquidity screen, 3,734 (94%) ranked by
-momentum with 5 years of real daily history — see
+**Market-wide screener track: Stages A–B complete, and IC-validated.**
+8,356 US+Canada companies scanned, 3,954 survive a liquidity screen, 3,734
+(94%) ranked by momentum with 5 years of real daily history — see
 [docs/methodology.md § 6](docs/methodology.md#6-market-wide-screener-us--canada-all-listed-common-stocks)
 for the two data-source bugs found and fixed along the way, and the
 honest caveat that this ranking is pure momentum, not risk-adjusted.
+**Important finding from validating it (§7):** an Alphalens-style
+Information Coefficient study found this ranker shows no demonstrated
+forward-predictive skill at 1- or 3-month horizons (IC ≈ 0) — it's a real
+description of recent performance, not a shown buy signal. Reported
+because that's what the evidence says, not because it flatters the
+project.
 
 **Stage C (shrinkage vs. sample covariance) also done** — Ledoit-Wolf
 shrinkage keeps a 300-name portfolio's covariance matrix usable even where
@@ -82,4 +88,5 @@ python3 -m venv .venv
 .venv/bin/python scripts/run_backtest.py   # Phase 1: walk-forward, out-of-sample
 .venv/bin/python scripts/generate_tearsheet.py  # HTML tearsheets (results/tearsheet_*.html)
 .venv/bin/python scripts/scan_universe.py  # Stage A: full US+Canada market scan
+.venv/bin/python scripts/validate_ranker_ic.py  # IC validation of the momentum ranker
 ```

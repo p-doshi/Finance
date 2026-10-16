@@ -578,6 +578,63 @@ correction. Worth stating plainly: this is exactly why cross-checking a
 hand-rolled metric against a real, independently-implemented tool is worth
 doing before publishing a number, not after.
 
+### Information Coefficient validation of the Stage B ranker — a humbling, important finding
+
+Everything in §6 ranks the universe by trailing momentum. It never checked
+whether that ranking *predicts* anything. Alphalens-style IC analysis
+(`research/ic_analysis.py`, `scripts/validate_ranker_ic.py`) does: at 16
+quarterly snapshots across the full 5-year history, compute the same
+composite momentum signal as of that date (using only data up to that
+date — no lookahead, verified the same way as the Phase 1 backtest, by
+corrupting post-cutoff data and confirming untouched snapshots are
+bit-identical) and correlate it (Spearman, cross-sectional) against the
+realized forward return.
+
+**A real data-calendar bug found before trusting any of this:** the first
+run alternated between ~3,000-name snapshots and exactly **zero**-name
+snapshots. Cause: outer-joining US and Canadian tickers onto one date
+index means every US-market holiday (Thanksgiving, July 4th, MLK Day — 27
+such dates in this history) becomes a row where every single US ticker is
+NaN, because TSX traded that day and the outer join keeps the row alive.
+Any forward-return window requiring *complete* data (deliberately strict —
+see `ic_analysis.py`'s docstring on why a partial sum is worse than no
+sum) gets poisoned whenever it straddles one of these rows, and whether
+it straddles one depends on the snapshot date — hence the alternation.
+Fixed by restricting this study to US-only tickers (94% of the screened
+universe, 3,494 of 3,734 with history on disk); mixing calendars isn't
+worth the coverage lost by excluding them.
+
+**The result, run fairly across three horizons** (momentum literature
+documents a well-known short-term reversal effect that can swamp genuine
+momentum at 1-month horizons, so testing only 21 days and stopping would
+risk testing the wrong regime rather than reaching a real null):
+
+| Horizon | Mean IC | SE | t-stat | Snapshots |
+|---|---|---|---|---|
+| 1 month (21d) | -0.0016 | 0.0234 | -0.07 | 16 |
+| 3 month (63d) | -0.0068 | 0.0290 | -0.23 | 15 |
+| 6 month (126d) | +0.0291 | 0.0209 | +1.39 | 14 |
+
+**This ranker shows no demonstrated forward-predictive skill at 1 or 3
+months** — IC indistinguishable from zero, nowhere near the practitioner
+benchmark of ~0.05 for "good." The decile analysis confirms this
+concretely: pooled across all snapshots, average 21-day forward return by
+signal decile runs +2.09%, +2.04%, +1.84%, +2.16%, +2.34%, +2.23%, +1.94%,
++2.12%, +2.01%, +2.11% — essentially flat noise around 2%, not the
+monotonically increasing pattern a working signal should show. At 6
+months there's a hint of positive skill (+0.029, t=1.39) but it doesn't
+clear conventional significance, and 14 quarterly snapshots over one
+5-year window aren't independent bets in the Fundamental Law's strict
+sense — this is suggestive, not established.
+
+**What this means for §6's rankings:** they remain a valid, real
+description of which stocks moved the most over the trailing 3/6/12
+months — that part is just arithmetic on verified prices. What they are
+*not*, on this evidence, is a demonstrated forward-looking signal. Using
+the top of that ranking as an actual buy list would be acting on an
+ordering that hasn't been shown to predict anything, which is exactly the
+distinction this section exists to make rather than leave implicit.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
