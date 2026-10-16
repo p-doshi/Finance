@@ -684,6 +684,56 @@ should be read as indicative given the data available (2 years of
 monthly out-of-sample periods), not as a precise estimate a larger
 backtest would also produce.
 
+### Black-Litterman (`research/black_litterman.py`)
+
+Black & Litterman (1992): reverse-optimize equilibrium returns from
+market-cap weights, then Bayesian-blend with investor views, each with
+its own confidence. Targets the exact instability already found in Phase
+1 (max-Sharpe's expected-return input is too noisy to optimize against
+hard) by replacing a historical-mean estimate with something anchored to
+the market's own revealed preferences.
+
+Verified against two closed-form limiting cases rather than just unit
+tests of arithmetic: (1) feeding the implied returns straight back into
+max-Sharpe optimization exactly recovers the market-cap weights — the
+actual self-consistency property reverse-optimization is supposed to
+have, not assumed; (2) a view given near-zero confidence (Omega → ∞)
+leaves the posterior equal to the prior, and a view given near-full
+confidence (Omega → 0) pulls the posterior to match the view almost
+exactly — both checked directly.
+
+**Honest framing of the one view used in the demonstration
+(`scripts/run_black_litterman.py`):** it is NOT Stage B's momentum
+signal — the IC study immediately above already found that signal has no
+demonstrated predictive skill, and feeding it in as a "view" here would
+mean laundering a shown-not-to-work signal into a result that looks more
+sophisticated. Instead, the demonstration uses a modest, explicitly
+labeled illustrative view grounded in the separately-documented value
+premium (cheapest P/E in the group, NVO at 9.5x, outperforms the priciest,
+ASML at 53.8x, by 5%/yr) — flagged as illustrative-only, since this value
+view has **not** been IC-validated here either; it exists to demonstrate
+the machinery correctly, not to claim a working signal.
+
+**A real limitation surfaced by running this on the 12-stock group rather
+than a true market index:** NVIDIA is 53.5% of this group's combined
+market cap (real data, Stage A), nothing like a representative
+diversified market portfolio. Reverse-optimization honestly reports what
+market cap implies — NVDA's equilibrium return comes out to +85.2%/year,
+and the resulting BL max-Sharpe portfolio concentrates 80.5% in NVDA. This
+is not a flaw in Black-Litterman; it is Black-Litterman doing exactly
+what it's supposed to given its input, and the input here is a small,
+cap-imbalanced group rather than a genuine market portfolio. A real
+application would reverse-optimize from a full benchmark index (e.g.
+S&P 500 weights), not 12 hand-picked names. Reported plainly rather than
+picking a friendlier universe to make the demo look cleaner.
+
+**The view's effect is traceable, which is the actual point of the
+method over a black-box return forecast:** NVO's expected return shifts
+from +18.8% to +28.4% (+9.56pp) and ASML's from +51.3% to +42.1%
+(-9.20pp) — symmetric, localized to the two named assets plus small
+ripple effects through their correlations with the rest of the group, not
+an opaque reshuffling of the whole return vector.
+
 ## 8. Roadmap
 
 0. **Foundations** (done) — package, tests, CI, validated + point-in-time
