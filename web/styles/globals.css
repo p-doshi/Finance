@@ -331,6 +331,79 @@ a {
   color: var(--critical);
 }
 
+/* -- Leaderboard cards (Explore) -- */
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  text-decoration: none;
+  color: inherit;
+  border-top: 1px solid var(--grid);
+  transition: background 120ms ease;
+}
+
+.board-list li:first-child .board-row {
+  border-top: none;
+}
+
+.board-row:hover {
+  background: var(--surface-1);
+}
+
+.board-rank {
+  width: 16px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-id {
+  min-width: 48px;
+  flex-shrink: 0;
+  font-weight: 650;
+  font-size: 13px;
+}
+
+.board-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.board-value {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* -- Loading skeleton -- */
 
 .skeleton {
