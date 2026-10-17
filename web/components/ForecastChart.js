@@ -9,7 +9,15 @@ import { useMemo, useState } from "react";
 export default function ForecastChart({ dates, scenarios }) {
   const [hoverX, setHoverX] = useState(null);
   const n = dates?.length || 0;
-  if (!n || !scenarios?.length) return null;
+  // defensive: a scenario mid-transition (e.g. the caller just switched
+  // which method it's comparing against, before the new fetch resolves) can
+  // arrive without its p10/p50/p90 yet -- drop it rather than crash on
+  // `[...undefined]` below.
+  const validScenarios = (scenarios || []).filter(
+    (s) => Array.isArray(s.p10) && Array.isArray(s.p50) && Array.isArray(s.p90) && s.p10.length === n && s.p90.length === n
+  );
+  if (!n || validScenarios.length === 0) return null;
+  scenarios = validScenarios;
 
   const W = 640;
   const H = 320;

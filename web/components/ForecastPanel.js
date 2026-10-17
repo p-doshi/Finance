@@ -32,8 +32,12 @@ export default function ForecastPanel({ holdings }) {
   const holdingsKey = (holdings || []).map((h) => `${h.ticker}:${h.shares}`).join(",");
 
   useEffect(() => {
+    // cleared synchronously (not just on response) so a changed compareMethod
+    // never renders stale `result` -- the previous result's scenarios dict
+    // doesn't have the newly-selected method's p10/p50/p90 yet, and spreading
+    // that missing data into ForecastChart crashed it
+    setResult(null);
     if (!holdings || holdings.length === 0) {
-      setResult(null);
       return;
     }
     let cancelled = false;
