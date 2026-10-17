@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { convert } from "../lib/currency";
 
 // Fan chart: one or two scenarios, each a p50 median line (2px, series hue)
 // with its p10-p90 band as the same hue at ~10% opacity -- the uncertainty
@@ -6,9 +7,13 @@ import { useMemo, useState } from "react";
 // line. Shared crosshair tracks the pointer's X and shows every scenario's
 // median + range at that date in one tooltip (dataviz skill: "one
 // tooltip, every series").
-export default function ForecastChart({ dates, scenarios }) {
+export default function ForecastChart({ dates, scenarios, currency = "USD", fxRate = null }) {
   const [hoverX, setHoverX] = useState(null);
   const n = dates?.length || 0;
+  const fmt = (v) => {
+    const prefix = currency === "CAD" && fxRate ? "C$" : "$";
+    return `${prefix}${Math.round(convert(v, currency, fxRate)).toLocaleString()}`;
+  };
   // defensive: a scenario mid-transition (e.g. the caller just switched
   // which method it's comparing against, before the new fetch resolves) can
   // arrive without its p10/p50/p90 yet -- drop it rather than crash on
@@ -66,7 +71,7 @@ export default function ForecastChart({ dates, scenarios }) {
           <g key={i}>
             <line x1={margin.left} x2={margin.left + plotW} y1={yAt(v)} y2={yAt(v)} stroke="var(--grid)" strokeWidth="1" />
             <text x={margin.left - 8} y={yAt(v) + 3} textAnchor="end" fontSize="10" fill="var(--muted)">
-              ${Math.round(v).toLocaleString()}
+              {fmt(v)}
             </text>
           </g>
         ))}
@@ -93,7 +98,7 @@ export default function ForecastChart({ dates, scenarios }) {
             fontWeight="650"
             fill="var(--text-primary)"
           >
-            ${Math.round(s.p50[n - 1]).toLocaleString()}
+            {fmt(s.p50[n - 1])}
           </text>
         ))}
 
@@ -143,9 +148,9 @@ export default function ForecastChart({ dates, scenarios }) {
             <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ display: "inline-block", width: 10, height: 2, background: s.color }} />
               <span>
-                ${Math.round(s.p50[hoverIdx]).toLocaleString()}{" "}
+                {fmt(s.p50[hoverIdx])}{" "}
                 <span style={{ opacity: 0.7 }}>
-                  (${Math.round(s.p10[hoverIdx]).toLocaleString()}–${Math.round(s.p90[hoverIdx]).toLocaleString()})
+                  ({fmt(s.p10[hoverIdx])}–{fmt(s.p90[hoverIdx])})
                 </span>
               </span>
             </div>

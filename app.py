@@ -31,6 +31,15 @@ POST /api/forecast {holdings: {ticker: shares}, add_amount, distributions,
        block-bootstrap forward simulation (research.forecast), not a
        backtest and not a prediction. See that module's docstring for what
        it does and does not establish.
+POST /api/add-funds {holdings: {ticker: shares}, add_amount}
+    -> {current_value, add_amount, total_value_after, current_weights,
+        trades: [{ticker, action, shares, price, est_value}], cash_after}
+       -- a concrete whole-share buy plan that puts new cash into your
+       existing positions in their current proportions (decision.
+       trade_ticket, already used/tested elsewhere in this project).
+       Deliberately not a what-if comparison -- that's /api/forecast;
+       this always targets "same split", the Wealthsimple-style
+       auto-invest behavior.
 
 Same TICKERS/RF/WINDOW/REBAL_EVERY/COST_BPS as scripts/export_web_data.py
 -- this is the live-fetching twin of that script, not a separate design.
@@ -56,6 +65,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from portfolio_pipeline.data.fetch import DataQualityError, fetch_raw, validate  # noqa: E402
 from portfolio_pipeline.data.universe import fetch_full_universe, screen  # noqa: E402
+from portfolio_pipeline.decision.trade_ticket import current_weights as ticket_current_weights  # noqa: E402
+from portfolio_pipeline.decision.trade_ticket import generate_trade_ticket  # noqa: E402
 from portfolio_pipeline.research.backtest import walk_forward  # noqa: E402
 from portfolio_pipeline.research.forecast import simulate_forward  # noqa: E402
 from portfolio_pipeline.research.hrp import hrp_weight  # noqa: E402
@@ -108,14 +119,24 @@ class ForecastRequest(BaseModel):
     horizon_days: int = 252
 
 
+class AddFundsRequest(BaseModel):
+    holdings: dict[str, float]  # ticker -> shares
+    add_amount: float
+
+
 app = FastAPI()
 
 
-def _load_log_returns_and_latest():
+def _load_log_returns_and_latest(tickers=TICKERS, *, min_rows=200, max_single_day_move=0.5):
+    # defaults match validate()'s own, calibrated for the curated 12-name
+    # watchlist; the custom-ticker path below passes the same relaxed
+    # values used for /api/stock and /api/forecast instead, since an
+    # arbitrary visitor-chosen name may be newly listed or more volatile
+    # than this mega-cap watchlist.
     series, latest_price, latest_date = {}, {}, None
-    for ticker in TICKERS:
+    for ticker in tickers:
         payload = fetch_raw(ticker, range_="5Y", period="Daily")
-        rows = validate(ticker, payload)
+        rows = validate(ticker, payload, min_rows=min_rows, max_single_day_move=max_single_day_move)
         s = pd.Series({r.date: r.adj_close for r in rows}, name=ticker)
         s.index = pd.to_datetime(s.index)
         s = s.sort_index()
@@ -132,22 +153,66 @@ def health():
     return {"status": "ok"}
 
 
+MAX_CUSTOM_TICKERS = 20
+
+
 @app.get("/api/portfolio")
-def portfolio(method: str = "risk_parity", response: Response = None):
+def portfolio(method: str = "risk_parity", tickers: str = "", response: Response = None):
     if method not in METHODS:
         raise HTTPException(status_code=400, detail=f"unknown method, choose one of {list(METHODS)}")
+
+    custom = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    if custom:
+        if len(custom) < 2:
+            raise HTTPException(status_code=400, detail="need at least 2 tickers to backtest a portfolio")
+        if len(custom) > MAX_CUSTOM_TICKERS:
+            raise HTTPException(status_code=400, detail=f"too many tickers (max {MAX_CUSTOM_TICKERS})")
+        for t in custom:
+            if not _TICKER_RE.match(t):
+                raise HTTPException(status_code=400, detail=f"invalid ticker format: {t}")
+        use_tickers = custom
+        n = len(custom)
+        weight_fn = {
+            "equal_weight": lambda trailing: equal_weight(n),
+            "risk_parity": lambda trailing: risk_parity_weight(trailing.cov().values * 252),
+            "hrp": lambda trailing: hrp_weight(trailing.cov().values * 252),
+            "min_variance": lambda trailing: min_variance_weight(trailing.cov().values * 252),
+            "max_sharpe": lambda trailing: max_sharpe_weight(trailing.cov().values * 252, trailing.mean().values * 252, RF),
+        }[method]
+    else:
+        use_tickers = TICKERS
+        weight_fn = METHODS[method]
+
     try:
-        log_ret, latest_price, as_of_date = _load_log_returns_and_latest()
+        if custom:
+            # relaxed vs. the curated watchlist's defaults -- an arbitrary
+            # visitor-chosen name may be newly listed or more volatile than
+            # this project's mega-cap research watchlist (same reasoning as
+            # /api/stock/{ticker} and /api/forecast).
+            log_ret, latest_price, as_of_date = _load_log_returns_and_latest(
+                use_tickers, min_rows=60, max_single_day_move=0.95
+            )
+        else:
+            log_ret, latest_price, as_of_date = _load_log_returns_and_latest(use_tickers)
     except DataQualityError as e:
         raise HTTPException(status_code=502, detail=f"price data fetch failed: {e}") from e
 
-    res = walk_forward(
-        log_ret, METHODS[method], window=WINDOW, rebal_every=REBAL_EVERY, cost_bps=COST_BPS, method_name=method
-    )
+    n_days = len(log_ret)
+    effective_window = WINDOW if not custom else min(WINDOW, max(126, (n_days - REBAL_EVERY) // 2))
+    try:
+        res = walk_forward(
+            log_ret, weight_fn, window=effective_window, rebal_every=REBAL_EVERY, cost_bps=COST_BPS, method_name=method
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"not enough overlapping history across these tickers to backtest ({e})",
+        ) from e
+
     equity = 10_000.0 * np.exp(np.cumsum(res.net_period_returns))
     curve = [{"date": str(res.dates[0].date()), "value": 10_000.0}]
     curve += [{"date": str(d.date()), "value": round(float(v), 2)} for d, v in zip(res.dates, equity)]
-    final_weights = dict(zip(TICKERS, [round(float(w), 6) for w in res.weights[-1]]))
+    final_weights = dict(zip(use_tickers, [round(float(w), 6) for w in res.weights[-1]]))
 
     # daily-close-based backtest doesn't need recomputing on every request;
     # cache at Vercel's edge so simulator traffic doesn't hammer the upstream
@@ -156,10 +221,11 @@ def portfolio(method: str = "risk_parity", response: Response = None):
         response.headers["Cache-Control"] = "s-maxage=3600, stale-while-revalidate=7200"
 
     return {
-        "tickers": TICKERS,
+        "tickers": use_tickers,
         "as_of_date": as_of_date,
         "last_known_prices": latest_price,
         "method": method,
+        "window_days": effective_window,
         "equity_curve": curve,
         "final_weights": final_weights,
         "last_curve_value": curve[-1]["value"],
@@ -327,4 +393,54 @@ def forecast(req: ForecastRequest):
         "n_sims": 2000,
         "block_size": 5,
         "scenarios": scenarios,
+    }
+
+
+@app.post("/api/add-funds")
+def add_funds(req: AddFundsRequest):
+    if not req.holdings:
+        raise HTTPException(status_code=400, detail="holdings must include at least one position")
+    tickers = [t.upper() for t in req.holdings]
+    for t in tickers:
+        if not _TICKER_RE.match(t):
+            raise HTTPException(status_code=400, detail=f"invalid ticker format: {t}")
+    if req.add_amount < 0:
+        raise HTTPException(status_code=400, detail="add_amount must be >= 0")
+
+    latest_price = {}
+    try:
+        for t in tickers:
+            payload = fetch_raw(t, range_="1M", period="Daily")
+            rows = validate(t, payload, min_rows=1, max_single_day_move=0.95)
+            latest_price[t] = float(rows[-1].adj_close)
+    except DataQualityError as e:
+        raise HTTPException(status_code=502, detail=f"price data fetch failed: {e}") from e
+
+    # trade_ticket.py's whole-share contract predates this project's
+    # forecast feature, which allows fractional shares -- floor to whole
+    # shares only for this ticket computation, never for what's displayed
+    # or stored elsewhere.
+    positions = {t.upper(): int(s) for t, s in req.holdings.items()}
+    held_only = {"cash": 0.0, "positions": positions}
+    target_weights, current_value = ticket_current_weights(held_only, latest_price)
+    if not target_weights or current_value <= 0:
+        raise HTTPException(
+            status_code=400, detail="current holdings value must be > 0 -- enter at least one position with shares > 0"
+        )
+
+    with_new_cash = {"cash": req.add_amount, "positions": positions}
+    ticket = generate_trade_ticket(with_new_cash, target_weights, latest_price, drift_band=0.0)
+
+    return {
+        "as_of": datetime.now(timezone.utc).date().isoformat(),
+        "latest_prices": latest_price,
+        "current_value": round(current_value, 2),
+        "current_weights": {t: round(w, 6) for t, w in target_weights.items()},
+        "add_amount": req.add_amount,
+        "total_value_after": round(ticket["total_value"], 2),
+        "trades": [
+            {"ticker": t.ticker, "action": t.action, "shares": t.shares, "price": t.price, "est_value": t.est_value}
+            for t in ticket["trades"]
+        ],
+        "cash_after": ticket["cash_after"],
     }

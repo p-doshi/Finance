@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import TickerAutocomplete from "./TickerAutocomplete";
+import { formatMoney } from "../lib/currency";
 
 const STORAGE_KEY = "pps_holdings_v1";
 const TICKER_RE = /^[A-Za-z0-9.-]{1,10}$/;
-const MAX_SUGGESTIONS = 8;
 
 // Real position data is personal financial information. This never leaves
 // the browser: no server, no database, no git -- saved to localStorage
@@ -31,41 +32,11 @@ function saveHoldings(rows) {
   }
 }
 
-const fmtMoney = (n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-export default function HoldingsEditor({ rows, onChange, quotes, quotesLoading }) {
+export default function HoldingsEditor({ rows, onChange, quotes, quotesLoading, currency = "USD", fxRate = null }) {
+  const fmtMoney = (n) => formatMoney(n, currency, fxRate);
   const [draft, setDraft] = useState({ ticker: "", shares: "" });
   const [draftError, setDraftError] = useState(null);
-  const [universe, setUniverse] = useState(null);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const fetchedUniverse = useRef(false);
   const sharesInputRef = useRef(null);
-
-  // Lazy: only fetch the ~4,000-row market snapshot (same /api/universe as
-  // the Explore page) once the ticker field is actually touched, not on
-  // every page load.
-  const ensureUniverseLoaded = () => {
-    if (fetchedUniverse.current) return;
-    fetchedUniverse.current = true;
-    fetch("/api/universe")
-      .then((r) => r.json())
-      .then((json) => {
-        if (Array.isArray(json.rows)) setUniverse(json.rows);
-      })
-      .catch((e) => console.error(`universe fetch for autocomplete failed: ${e}`));
-  };
-
-  const suggestions = useMemo(() => {
-    const q = draft.ticker.trim().toUpperCase();
-    if (!q || !universe) return [];
-    const held = new Set(rows.map((r) => r.ticker));
-    const starts = universe.filter((r) => !held.has(r.ticker) && r.ticker.startsWith(q));
-    const contains = universe.filter(
-      (r) => !held.has(r.ticker) && !r.ticker.startsWith(q) && r.name.toUpperCase().includes(q)
-    );
-    return [...starts, ...contains].slice(0, MAX_SUGGESTIONS);
-  }, [draft.ticker, universe, rows]);
 
   const update = (next) => {
     onChange(next);
@@ -74,8 +45,6 @@ export default function HoldingsEditor({ rows, onChange, quotes, quotesLoading }
 
   const pickSuggestion = (row) => {
     setDraft((d) => ({ ...d, ticker: row.ticker }));
-    setSuggestOpen(false);
-    setActiveIndex(-1);
     sharesInputRef.current?.focus();
   };
 
@@ -97,34 +66,6 @@ export default function HoldingsEditor({ rows, onChange, quotes, quotesLoading }
     setDraftError(null);
     update([...rows, { ticker, shares }]);
     setDraft({ ticker: "", shares: "" });
-    setSuggestOpen(false);
-    setActiveIndex(-1);
-  };
-
-  const handleTickerKeyDown = (e) => {
-    if (suggestOpen && suggestions.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIndex((i) => Math.max(i - 1, 0));
-        return;
-      }
-      if (e.key === "Escape") {
-        setSuggestOpen(false);
-        setActiveIndex(-1);
-        return;
-      }
-      if (e.key === "Enter" && activeIndex >= 0) {
-        e.preventDefault();
-        pickSuggestion(suggestions[activeIndex]);
-        return;
-      }
-    }
-    if (e.key === "Enter") addRow();
   };
 
   const removeRow = (ticker) => update(rows.filter((r) => r.ticker !== ticker));
@@ -204,83 +145,13 @@ export default function HoldingsEditor({ rows, onChange, quotes, quotesLoading }
       )}
 
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <label className="field" style={{ position: "relative" }}>
-          Ticker
-          <input
-            className="input"
-            type="text"
-            placeholder="AAPL"
-            autoComplete="off"
-            value={draft.ticker}
-            onFocus={ensureUniverseLoaded}
-            onChange={(e) => {
-              setDraft((d) => ({ ...d, ticker: e.target.value }));
-              setSuggestOpen(true);
-              setActiveIndex(-1);
-            }}
-            onKeyDown={handleTickerKeyDown}
-            onBlur={() => setTimeout(() => setSuggestOpen(false), 120)}
-            style={{ width: 100 }}
-          />
-          {suggestOpen && suggestions.length > 0 && (
-            <ul
-              role="listbox"
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                marginTop: 4,
-                width: 260,
-                maxHeight: 240,
-                overflowY: "auto",
-                background: "var(--surface-1)",
-                border: "1px solid var(--border)",
-                borderRadius: 9,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                listStyle: "none",
-                padding: 4,
-                margin: 0,
-                zIndex: 20,
-              }}
-            >
-              {suggestions.map((row, i) => (
-                <li
-                  key={row.ticker}
-                  role="option"
-                  aria-selected={i === activeIndex}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // fires before the input's onBlur
-                    pickSuggestion(row);
-                  }}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  style={{
-                    padding: "7px 10px",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    background: i === activeIndex ? "var(--surface-2)" : "transparent",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    fontSize: 12.5,
-                  }}
-                >
-                  <span style={{ fontWeight: 650 }}>{row.ticker}</span>
-                  <span
-                    style={{
-                      color: "var(--muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      textAlign: "right",
-                    }}
-                  >
-                    {row.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </label>
+        <TickerAutocomplete
+          value={draft.ticker}
+          onChange={(ticker) => setDraft((d) => ({ ...d, ticker }))}
+          onPick={pickSuggestion}
+          onSubmit={addRow}
+          excludeTickers={rows.map((r) => r.ticker)}
+        />
         <label className="field">
           Shares
           <input

@@ -39,7 +39,7 @@ export default function StockDetail() {
       </Head>
       <Nav />
       <main id="main-content" className="container">
-        <h1 className="page-title" style={{ fontSize: 24 }}>{ticker}</h1>
+        <h1 className="page-title reveal" style={{ fontSize: 24 }}>{ticker}</h1>
 
         {error && (
           <div className="down" style={{ fontSize: 13, margin: "10px 0" }}>
@@ -49,7 +49,7 @@ export default function StockDetail() {
 
         {data && (
           <>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, margin: "10px 0 18px" }}>
+            <div className="reveal" style={{ display: "flex", alignItems: "center", gap: 12, margin: "10px 0 18px" }}>
               <span className="hero-figure" style={{ fontSize: 32 }}>${data.price.toFixed(2)}</span>
               {data.day_change_pct != null && (
                 <span className={data.day_change_pct >= 0 ? "up" : "down"} style={{ fontSize: 15, fontWeight: 600 }}>
@@ -57,10 +57,13 @@ export default function StockDetail() {
                   {data.day_change_pct.toFixed(2)}%
                 </span>
               )}
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>as of {data.as_of}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                <span className="live-dot" style={{ marginRight: 6, verticalAlign: "middle" }} />
+                as of {data.as_of}
+              </span>
             </div>
 
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+            <div className="reveal" style={{ "--reveal-delay": "60ms", display: "flex", gap: 6, marginBottom: 14 }}>
               {RANGES.map((r) => (
                 <button
                   key={r}
@@ -72,11 +75,11 @@ export default function StockDetail() {
               ))}
             </div>
 
-            <Card style={{ marginBottom: 18 }}>
+            <Card className="reveal" style={{ "--reveal-delay": "120ms", marginBottom: 18 }}>
               <PriceChart series={data.series} color="auto" />
             </Card>
 
-            <div style={{ display: "flex", gap: 28, fontSize: 13 }}>
+            <div className="reveal" style={{ "--reveal-delay": "180ms", display: "flex", gap: 28, fontSize: 13 }}>
               <div>
                 <div className="eyebrow">52-week low</div>
                 <div style={{ fontVariantNumeric: "tabular-nums", marginTop: 2 }}>${data.low_52w.toFixed(2)}</div>

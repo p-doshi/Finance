@@ -32,9 +32,9 @@ function BoardValue({ metric, row }) {
   );
 }
 
-function LeaderboardCard({ title, rows, metric }) {
+function LeaderboardCard({ title, rows, metric, delay = 0 }) {
   return (
-    <Card>
+    <Card className="reveal" style={{ "--reveal-delay": `${delay}ms` }}>
       <div className="board-head">
         <div className="eyebrow">{title}</div>
       </div>
@@ -115,8 +115,9 @@ export default function Explore() {
       </Head>
       <Nav />
       <main id="main-content" className="container">
-        <h1 className="page-title">Explore</h1>
-        <p className="lede">
+        <h1 className="page-title reveal">Explore</h1>
+        <p className="lede reveal" style={{ "--reveal-delay": "60ms" }}>
+          {universe && <span className="live-dot" style={{ marginRight: 7, verticalAlign: "middle" }} />}
           {universe ? `${universe.count.toLocaleString()} US + Canada listings` : "Loading the market snapshot…"}
           {universe && ` as of ${universe.as_of}`} — liquidity-screened (market cap ≥ $100M, meaningful daily dollar
           volume), not every shell company on the tape.
@@ -124,7 +125,7 @@ export default function Explore() {
 
         {error && <div className="down" style={{ fontSize: 13, marginBottom: 16 }}>Couldn&apos;t load the market snapshot: {error}</div>}
 
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <div className="reveal" style={{ "--reveal-delay": "100ms", display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
           <input
             className="input"
             type="text"
@@ -155,7 +156,7 @@ export default function Explore() {
 
         {universe && query_ && (
           <>
-            <Card style={{ padding: "2px 16px" }}>
+            <Card className="reveal" style={{ padding: "2px 16px" }}>
               <div className="table-wrap">
                 <table className="table">
                   <thead>
@@ -207,8 +208,14 @@ export default function Explore() {
 
         {universe && !query_ && (
           <div className="board-grid">
-            {leaderboards.map((board) => (
-              <LeaderboardCard key={board.key} title={board.title} rows={board.rows} metric={board.metric} />
+            {leaderboards.map((board, i) => (
+              <LeaderboardCard
+                key={board.key}
+                title={board.title}
+                rows={board.rows}
+                metric={board.metric}
+                delay={i * 60}
+              />
             ))}
           </div>
         )}

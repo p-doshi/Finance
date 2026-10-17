@@ -67,7 +67,7 @@ export default function EquityChart({ curve, liveValue, color }) {
             </text>
           ) : null
         )}
-        <path d={linePath} fill="none" stroke={color} strokeWidth="2" />
+        <path className="chart-line" pathLength="1" d={linePath} fill="none" stroke={color} strokeWidth="2" />
         {curve.map((p, i) => (
           <circle
             key={i}
@@ -85,6 +85,7 @@ export default function EquityChart({ curve, liveValue, color }) {
         {liveY != null && (
           <>
             <line x1={margin.left + plotW} x2={liveX} y1={yAt(curve[n - 1].value)} y2={liveY} stroke={color} strokeWidth="2" strokeDasharray="3,3" />
+            <circle className="live-ping-dot" cx={liveX} cy={liveY} r="6" fill="var(--critical)" opacity="0.5" />
             <circle cx={liveX} cy={liveY} r="6" fill="var(--critical)" stroke="var(--surface-1)" strokeWidth="2" />
             <text x={liveX + 10} y={liveY + 4} fontSize="11" fontWeight="650" fill="var(--text-primary)">
               LIVE

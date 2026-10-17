@@ -17,25 +17,30 @@ export default function Nav() {
   return (
     <nav className="nav">
       <div className="nav-inner">
-        {TABS.map((t) => {
-          const active = router.pathname === t.href;
-          const className = `tab${active ? " active" : ""}${t.soon ? " soon" : ""}`;
-          const content = (
-            <>
-              {t.label}
-              {t.soon && <span className="tab-flag">soon</span>}
-            </>
-          );
-          return t.soon ? (
-            <span key={t.href} className={className}>
-              {content}
-            </span>
-          ) : (
-            <Link key={t.href} href={t.href} className={className}>
-              {content}
-            </Link>
-          );
-        })}
+        <Link href="/" className="brand" aria-label="Home">
+          <img src="/logo.svg" width={28} height={28} alt="" />
+        </Link>
+        <div className="tabs-scroll">
+          {TABS.map((t) => {
+            const active = router.pathname === t.href;
+            const className = `tab${active ? " active" : ""}${t.soon ? " soon" : ""}`;
+            const content = (
+              <>
+                {t.label}
+                {t.soon && <span className="tab-flag">soon</span>}
+              </>
+            );
+            return t.soon ? (
+              <span key={t.href} className={className}>
+                {content}
+              </span>
+            ) : (
+              <Link key={t.href} href={t.href} className={className}>
+                {content}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

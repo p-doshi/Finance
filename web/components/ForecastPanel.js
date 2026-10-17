@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ForecastChart from "./ForecastChart";
+import { formatMoney } from "../lib/currency";
 
 const METHOD_LABELS = {
   risk_parity: "Risk Parity",
@@ -9,7 +10,6 @@ const METHOD_LABELS = {
   equal_weight: "Equal Weight",
 };
 const HORIZONS = { "3M": 63, "6M": 126, "1Y": 252 };
-const fmtMoney = (n) => `$${Math.round(n).toLocaleString()}`;
 
 // Answers "if I add $X next month, should I split it the same way my
 // current holdings are split, or re-optimize?" -- by running the
@@ -18,7 +18,7 @@ const fmtMoney = (n) => `$${Math.round(n).toLocaleString()}`;
 // simulation under a stationarity assumption (the trailing return
 // distribution continuing), not a prediction -- the uncertainty band is
 // the honest part of the answer, not a caveat to skip past.
-export default function ForecastPanel({ holdings }) {
+export default function ForecastPanel({ holdings, currency = "USD", fxRate = null }) {
   const [amount, setAmount] = useState(100);
   const [compareMethod, setCompareMethod] = useState("risk_parity");
   const [horizonKey, setHorizonKey] = useState("1Y");
@@ -85,14 +85,17 @@ export default function ForecastPanel({ holdings }) {
     <div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 16 }}>
         <label className="field">
-          Amount to add next month
+          Amount to add next month ({currency})
           <input
             className="input"
             type="number"
             min="0"
             step="10"
-            value={amount}
-            onChange={(e) => setAmount(Math.max(0, Number(e.target.value) || 0))}
+            value={currency === "CAD" && fxRate ? Math.round(amount * fxRate) : amount}
+            onChange={(e) => {
+              const typed = Math.max(0, Number(e.target.value) || 0);
+              setAmount(currency === "CAD" && fxRate ? typed / fxRate : typed);
+            }}
             style={{ width: 110 }}
           />
         </label>
@@ -124,6 +127,8 @@ export default function ForecastPanel({ holdings }) {
         <>
           <ForecastChart
             dates={result.dates}
+            currency={currency}
+            fxRate={fxRate}
             scenarios={[
               { key: "same", label: "Same split as today", color: "var(--text-secondary)", ...result.scenarios.same },
               { key: compareMethod, label: `Re-optimized: ${METHOD_LABELS[compareMethod]}`, color: `var(--m-${compareMethod})`, ...result.scenarios[compareMethod] },
@@ -137,10 +142,12 @@ export default function ForecastPanel({ holdings }) {
           </p>
           {diff != null && (
             <p style={{ fontSize: 13.5, marginTop: 12 }}>
-              Median outcome after {horizonKey} on {fmtMoney(result.total_initial)} total: keeping today&apos;s split
-              lands near <b>{fmtMoney(sameFinal)}</b>; re-optimizing to {METHOD_LABELS[compareMethod]} lands near{" "}
-              <b>{fmtMoney(altFinal)}</b> ({diff >= 0 ? "+" : ""}
-              {fmtMoney(diff)}). Both numbers are the center of a wide range, not a guarantee -- see the band above.
+              Median outcome after {horizonKey} on {formatMoney(result.total_initial, currency, fxRate, { decimals: 0 })}{" "}
+              total: keeping today&apos;s split lands near <b>{formatMoney(sameFinal, currency, fxRate, { decimals: 0 })}</b>;
+              re-optimizing to {METHOD_LABELS[compareMethod]} lands near{" "}
+              <b>{formatMoney(altFinal, currency, fxRate, { decimals: 0 })}</b> ({diff >= 0 ? "+" : ""}
+              {formatMoney(diff, currency, fxRate, { decimals: 0 })}). Both numbers are the center of a wide range, not a
+              guarantee -- see the band above.
             </p>
           )}
         </>

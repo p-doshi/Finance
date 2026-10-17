@@ -50,7 +50,7 @@ export default function PriceChart({ series, color = "var(--m-risk_parity)" }) {
             </text>
           ) : null
         )}
-        <path d={linePath} fill="none" stroke={lineColor} strokeWidth="2" />
+        <path className="chart-line" pathLength="1" d={linePath} fill="none" stroke={lineColor} strokeWidth="2" />
         <rect
           x={margin.left}
           y={margin.top}
