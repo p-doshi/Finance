@@ -3,14 +3,17 @@
 // pages/api/portfolio.js for why this goes through a server-side route.
 
 export default async function handler(req, res) {
-  const { ticker, range: range_ } = req.query;
+  const { ticker, range: range_, risk } = req.query;
   const appUrl = process.env.APP_URL;
   if (!appUrl) {
     res.status(503).json({ error: "APP_URL not configured (local dev without the Python service running?)" });
     return;
   }
   try {
-    const qs = range_ ? `?range_=${encodeURIComponent(range_)}` : "";
+    const params = new URLSearchParams();
+    if (range_) params.set("range_", range_);
+    if (risk) params.set("risk", "true");
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const upstream = await fetch(`${appUrl}/api/stock/${encodeURIComponent(ticker)}${qs}`, {
       signal: AbortSignal.timeout(20_000),
     });

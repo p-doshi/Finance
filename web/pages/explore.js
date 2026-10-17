@@ -3,26 +3,9 @@ import Head from "next/head";
 import Link from "next/link";
 import Nav from "../components/Nav";
 import Card from "../components/Card";
+import { fmtCap, fmtVolume, fmtChange } from "../lib/format";
 
 const TOP_N = 10;
-
-const fmtCap = (n) => {
-  if (n == null) return "—";
-  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
-  return `$${n.toLocaleString()}`;
-};
-
-const fmtVolume = (n) => {
-  if (n == null) return "—";
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
-  return `${n}`;
-};
-
-const fmtChange = (pct) => (pct != null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "—");
 
 function BoardValue({ metric, row }) {
   if (metric === "cap") return <span className="board-value">{fmtCap(row.market_cap)}</span>;

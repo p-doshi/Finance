@@ -40,6 +40,15 @@ POST /api/add-funds {holdings: {ticker: shares}, add_amount}
        Deliberately not a what-if comparison -- that's /api/forecast;
        this always targets "same split", the Wealthsimple-style
        auto-invest behavior.
+GET /api/underdogs?min_cap=...&max_cap=...&limit=25
+    -> {count_in_band, count_ranked, count_excluded, rows: [...]} --
+       a transparent, rule-based value screen (ascending P/E) within a
+       chosen market-cap band, same universe data as /api/universe.
+POST /api/recommendations {holdings: {ticker: shares}}
+    -> {current_value, current_weights, sector_weights, annualized_vol,
+        flags: [{severity, title, detail}]} -- fixed-threshold concentration
+       and volatility checks against real holdings, not a trained model
+       (see the threshold constants' docstring for why not, for now).
 
 Same TICKERS/RF/WINDOW/REBAL_EVERY/COST_BPS as scripts/export_web_data.py
 -- this is the live-fetching twin of that script, not a separate design.
@@ -76,6 +85,7 @@ from portfolio_pipeline.research.optimizers import (  # noqa: E402
     min_variance_weight,
     risk_parity_weight,
 )
+from portfolio_pipeline.research.screen import annualized_vol, compute_beta, max_drawdown  # noqa: E402
 
 # Real tickers look like AAPL, BRK.B, RY (TSX); this is a permissive but
 # closed charset, not a format spec -- it exists only to stop arbitrary
@@ -122,6 +132,10 @@ class ForecastRequest(BaseModel):
 class AddFundsRequest(BaseModel):
     holdings: dict[str, float]  # ticker -> shares
     add_amount: float
+
+
+class RecommendationsRequest(BaseModel):
+    holdings: dict[str, float]  # ticker -> shares
 
 
 app = FastAPI()
@@ -266,8 +280,81 @@ def universe(response: Response = None):
     }
 
 
+_RISK_BENCHMARK = "SPY"
+# A P/E this low on a real operating company is vanishingly rare -- in
+# practice it almost always means a trust/REIT unit (FFO-based valuation,
+# not GAAP-earnings-based, so a GAAP P/E on one is close to meaningless),
+# a one-time gain, or a data error, not genuine cheapness. Checked
+# directly: without this floor the top of an unfiltered scan was REIT and
+# trust units at P/E 0.2-0.9, not real bargains. Excluding them is a
+# scope limitation (sector-aware valuation, e.g. FFO multiples for REITs,
+# is out of scope here), stated plainly rather than silently producing a
+# list that looks broken.
+MIN_PE_RATIO = 3.0
+
+
+@app.get("/api/underdogs")
+def underdogs(
+    min_cap: float = 100_000_000,
+    max_cap: float = 5_000_000_000,
+    limit: int = 25,
+    response: Response = None,
+):
+    """A transparent value screen within a user-chosen market-cap band --
+    "underdog" here means cheap relative to earnings, not a black-box
+    score. Ranks by ascending P/E among names with a P/E above MIN_PE_RATIO;
+    loss-making, no-P/E, or implausibly-low-P/E names in the band aren't
+    force-ranked into a list where "cheap" has no reliable meaning for
+    them, they're just counted separately so nothing about the band is
+    hidden.
+    """
+    if min_cap < 0 or max_cap <= min_cap:
+        raise HTTPException(status_code=400, detail="max_cap must be greater than min_cap, both >= 0")
+    if not (1 <= limit <= 100):
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 100")
+
+    try:
+        rows = screen(fetch_full_universe())
+    except DataQualityError as e:
+        raise HTTPException(status_code=502, detail=f"universe fetch failed: {e}") from e
+
+    in_band = [r for r in rows if r.market_cap is not None and min_cap <= r.market_cap <= max_cap]
+    valued = sorted(
+        (r for r in in_band if r.pe_ratio is not None and r.pe_ratio > MIN_PE_RATIO),
+        key=lambda r: r.pe_ratio,
+    )
+    excluded_count = len(in_band) - len(valued)
+
+    if response is not None:
+        response.headers["Cache-Control"] = "s-maxage=1800, stale-while-revalidate=3600"
+
+    return {
+        "as_of": datetime.now(timezone.utc).date().isoformat(),
+        "min_cap": min_cap,
+        "max_cap": max_cap,
+        "count_in_band": len(in_band),
+        "count_ranked": len(valued),
+        "count_excluded": excluded_count,
+        "rows": [
+            {
+                "ticker": r.ticker,
+                "name": r.name,
+                "country": r.country,
+                "exchange": r.exchange,
+                "market_cap": r.market_cap,
+                "price": r.price,
+                "day_change_pct": r.day_change_pct,
+                "sector": r.sector,
+                "volume": r.volume,
+                "pe_ratio": r.pe_ratio,
+            }
+            for r in valued[:limit]
+        ],
+    }
+
+
 @app.get("/api/stock/{ticker}")
-def stock_detail(ticker: str, range_: str = "1Y", response: Response = None):
+def stock_detail(ticker: str, range_: str = "1Y", risk: bool = False, response: Response = None):
     ticker = ticker.upper()
     if not _TICKER_RE.match(ticker):
         raise HTTPException(status_code=400, detail="invalid ticker format")
@@ -290,7 +377,7 @@ def stock_detail(ticker: str, range_: str = "1Y", response: Response = None):
     if response is not None:
         response.headers["Cache-Control"] = "s-maxage=300, stale-while-revalidate=900"
 
-    return {
+    result = {
         "ticker": ticker,
         "as_of": latest.date,
         "price": latest.adj_close,
@@ -299,6 +386,34 @@ def stock_detail(ticker: str, range_: str = "1Y", response: Response = None):
         "low_52w": min(r.adj_close for r in window_1y),
         "series": [{"date": r.date, "close": r.adj_close, "volume": r.volume} for r in rows],
     }
+
+    # Opt-in: Explore's plain stock-detail view doesn't need this on every
+    # load, but Underdogs' risk analysis does -- compute_beta/annualized_vol/
+    # max_drawdown are the same functions research/screen.py uses to rank
+    # the broader universe, not a separate metric just for this view.
+    if risk:
+        s = pd.Series({r.date: r.adj_close for r in rows})
+        s.index = pd.to_datetime(s.index)
+        log_ret = np.log(s.sort_index() / s.sort_index().shift(1)).dropna()
+
+        beta = None
+        try:
+            bench_payload = fetch_raw(_RISK_BENCHMARK, range_=range_, period="Daily")
+            bench_rows = validate(_RISK_BENCHMARK, bench_payload, min_rows=5, max_single_day_move=0.95)
+            bench_s = pd.Series({r.date: r.adj_close for r in bench_rows})
+            bench_s.index = pd.to_datetime(bench_s.index)
+            bench_log_ret = np.log(bench_s.sort_index() / bench_s.sort_index().shift(1)).dropna()
+            beta = compute_beta(log_ret, bench_log_ret)
+        except DataQualityError:
+            pass  # beta is a bonus field here -- a benchmark fetch failure shouldn't 404 the whole page
+
+        result["risk"] = {
+            "annualized_vol": annualized_vol(log_ret, window_days=min(252, len(log_ret))),
+            "max_drawdown": max_drawdown(log_ret, window_days=min(252, len(log_ret))),
+            "beta_vs_spy": beta,
+        }
+
+    return result
 
 
 @app.post("/api/forecast")
@@ -443,4 +558,125 @@ def add_funds(req: AddFundsRequest):
             for t in ticket["trades"]
         ],
         "cash_after": ticket["cash_after"],
+    }
+
+
+# Thresholds below are stated, fixed rules, not a trained or fit model --
+# a rule-based first pass per the project's current scope. Each is a round,
+# defensible number (a single name or sector above 30%/50% of a portfolio
+# is concentration risk by any standard definition; 3 names is the point
+# single-company news starts to dominate the whole account's return), not
+# backtested or optimized against this project's own data -- doing that
+# would risk fitting the thresholds to look good on a tiny number of
+# example portfolios, the same overfitting trap research/overfitting.py
+# exists to catch elsewhere in this project.
+MAX_POSITION_WEIGHT = 0.30
+MAX_SECTOR_WEIGHT = 0.50
+MIN_POSITIONS = 3
+HIGH_VOL_THRESHOLD = 0.35  # annualized
+
+
+@app.post("/api/recommendations")
+def recommendations(req: RecommendationsRequest):
+    if not req.holdings:
+        raise HTTPException(status_code=400, detail="holdings must include at least one position")
+    tickers = [t.upper() for t in req.holdings]
+    for t in tickers:
+        if not _TICKER_RE.match(t):
+            raise HTTPException(status_code=400, detail=f"invalid ticker format: {t}")
+    shares = {t.upper(): s for t, s in req.holdings.items()}
+
+    series, latest_price = {}, {}
+    try:
+        for t in tickers:
+            payload = fetch_raw(t, range_="2Y", period="Daily")
+            rows = validate(t, payload, min_rows=60, max_single_day_move=0.95)
+            s = pd.Series({r.date: r.adj_close for r in rows}, name=t)
+            s.index = pd.to_datetime(s.index)
+            series[t] = s.sort_index()
+            latest_price[t] = float(series[t].iloc[-1])
+    except DataQualityError as e:
+        raise HTTPException(status_code=502, detail=f"price data fetch failed: {e}") from e
+
+    current_value = sum(shares[t] * latest_price[t] for t in tickers)
+    if current_value <= 0:
+        raise HTTPException(
+            status_code=400, detail="current holdings value must be > 0 -- enter at least one position with shares > 0"
+        )
+    weights = {t: shares[t] * latest_price[t] / current_value for t in tickers}
+
+    try:
+        universe_rows = fetch_full_universe()
+    except DataQualityError as e:
+        raise HTTPException(status_code=502, detail=f"universe fetch failed: {e}") from e
+    sector_by_ticker = {r.ticker: (r.sector or "Unknown") for r in universe_rows}
+
+    sector_weights: dict[str, float] = {}
+    for t in tickers:
+        sec = sector_by_ticker.get(t, "Unknown")
+        sector_weights[sec] = sector_weights.get(sec, 0.0) + weights[t]
+
+    prices = pd.DataFrame(series).dropna(how="any")
+    log_ret = np.log(prices / prices.shift(1)).dropna()
+    w_series = pd.Series(weights).reindex(tickers).fillna(0.0)
+    portfolio_daily_ret = log_ret[tickers].dot(w_series)
+    port_vol = annualized_vol(portfolio_daily_ret, window_days=min(252, len(portfolio_daily_ret)))
+
+    flags = []
+    worst_position = max(weights.items(), key=lambda kv: kv[1])
+    if worst_position[1] > MAX_POSITION_WEIGHT:
+        flags.append(
+            {
+                "severity": "warning",
+                "title": f"{worst_position[0]} is {worst_position[1] * 100:.0f}% of your portfolio",
+                "detail": f"A single name above {MAX_POSITION_WEIGHT * 100:.0f}% concentrates risk in one "
+                "company's outcome. Consider trimming it or adding other positions to dilute it.",
+            }
+        )
+    worst_sector = max(sector_weights.items(), key=lambda kv: kv[1])
+    if worst_sector[1] > MAX_SECTOR_WEIGHT:
+        flags.append(
+            {
+                "severity": "warning",
+                "title": f"{worst_sector[1] * 100:.0f}% of your portfolio is in {worst_sector[0]}",
+                "detail": f"A single sector above {MAX_SECTOR_WEIGHT * 100:.0f}% means a sector-wide shock hits "
+                f"most of your money at once. Explore or Underdogs can help find names outside {worst_sector[0]}.",
+            }
+        )
+    if len(tickers) < MIN_POSITIONS:
+        flags.append(
+            {
+                "severity": "info",
+                "title": f"Only {len(tickers)} position{'s' if len(tickers) != 1 else ''} held",
+                "detail": f"Fewer than {MIN_POSITIONS} names means any one company's news can swing your whole "
+                "portfolio. More positions, even small ones, reduce single-name risk.",
+            }
+        )
+    if port_vol is not None and port_vol > HIGH_VOL_THRESHOLD:
+        flags.append(
+            {
+                "severity": "warning",
+                "title": f"Realized volatility is high ({port_vol * 100:.0f}% annualized)",
+                "detail": "Your portfolio has swung more than a typical diversified mix over the last year. "
+                "Strategy Lab's Min-Variance or Risk Parity methods are built specifically to reduce this.",
+            }
+        )
+    if not flags:
+        flags.append(
+            {
+                "severity": "info",
+                "title": "No concentration or volatility flags from this check",
+                "detail": "Position sizes, sector mix, and realized volatility are all within the thresholds this "
+                "rule-based check looks for. That doesn't mean there's no risk -- only that none of the specific, "
+                "measurable kinds this check screens for were triggered.",
+            }
+        )
+
+    return {
+        "as_of": datetime.now(timezone.utc).date().isoformat(),
+        "current_value": round(current_value, 2),
+        "current_weights": {t: round(w, 6) for t, w in weights.items()},
+        "sector_weights": {s: round(w, 6) for s, w in sorted(sector_weights.items(), key=lambda kv: -kv[1])},
+        "annualized_vol": port_vol,
+        "flags": flags,
     }

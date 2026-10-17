@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 
-// Underdogs/Recommendations are placeholders for pages not built yet --
-// listed so the shape of the eventual app is visible now, not added
-// silently later.
 const TABS = [
   { href: "/", label: "My Portfolio" },
   { href: "/simulator", label: "Strategy Lab" },
   { href: "/explore", label: "Explore" },
-  { href: "/underdogs", label: "Underdogs", soon: true },
-  { href: "/recommendations", label: "Recommendations", soon: true },
+  { href: "/underdogs", label: "Underdogs" },
+  { href: "/recommendations", label: "Recommendations" },
 ];
 
 export default function Nav() {
