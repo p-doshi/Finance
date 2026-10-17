@@ -1,6 +1,6 @@
-// Live quotes for the watchlist, fetched server-side (Vercel serverless
-// function) from Yahoo Finance's chart API -- the same endpoint already
-// validated and used throughout the Python side of this project
+// Live quotes, fetched server-side (Vercel serverless function) from
+// Yahoo Finance's chart API -- the same endpoint already validated and
+// used throughout the Python side of this project
 // (portfolio_pipeline.data.fetch_ca), confirmed live during this session
 // to return genuinely current prices (today's regularMarketPrice/Time).
 //
@@ -10,11 +10,15 @@
 // only (never exposed to the browser, which only ever calls this route).
 //
 // Cached at the edge for 30s (`Cache-Control`) so a page full of visitors
-// polling this route doesn't turn into 12 Yahoo requests per visitor per
+// polling this route doesn't turn into N Yahoo requests per visitor per
 // poll -- Vercel's CDN serves the cached response to everyone else within
-// that window.
+// that window. Pass ?tickers=A,B,C for an arbitrary list (the My Holdings
+// panel, which can hold anything); no param keeps the original fixed
+// watchlist behaviour the strategy simulator relies on.
 
-const TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"];
+const DEFAULT_TICKERS = ["NVDA", "JNJ", "KO", "PG", "WMT", "VZ", "XOM", "RY", "ENB", "UL", "NVO", "ASML"];
+const TICKER_RE = /^[A-Za-z0-9.-]{1,10}$/;
+const MAX_TICKERS = 40;
 
 async function fetchOne(ticker) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1d`;
@@ -36,11 +40,26 @@ async function fetchOne(ticker) {
 }
 
 export default async function handler(req, res) {
-  const settled = await Promise.allSettled(TICKERS.map(fetchOne));
+  let tickers = DEFAULT_TICKERS;
+  if (typeof req.query.tickers === "string" && req.query.tickers.length > 0) {
+    const requested = [...new Set(req.query.tickers.split(",").map((t) => t.trim().toUpperCase()).filter(Boolean))];
+    const invalid = requested.filter((t) => !TICKER_RE.test(t));
+    if (invalid.length > 0) {
+      res.status(400).json({ error: `invalid ticker format: ${invalid.join(", ")}` });
+      return;
+    }
+    if (requested.length > MAX_TICKERS) {
+      res.status(400).json({ error: `too many tickers (max ${MAX_TICKERS})` });
+      return;
+    }
+    tickers = requested;
+  }
+
+  const settled = await Promise.allSettled(tickers.map(fetchOne));
   const quotes = {};
   const errors = {};
   settled.forEach((r, i) => {
-    const ticker = TICKERS[i];
+    const ticker = tickers[i];
     if (r.status === "fulfilled") {
       quotes[ticker] = r.value;
     } else {

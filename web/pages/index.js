@@ -3,6 +3,9 @@ import Head from "next/head";
 import staticBacktest from "../data/backtest.json";
 import EquityChart from "../components/EquityChart";
 import Nav from "../components/Nav";
+import Card from "../components/Card";
+import HoldingsEditor, { loadHoldings } from "../components/HoldingsEditor";
+import ForecastPanel from "../components/ForecastPanel";
 
 const METHOD_LABELS = {
   equal_weight: "Equal Weight",
@@ -34,6 +37,41 @@ export default function Home() {
   const [quotes, setQuotes] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
   const [error, setError] = useState(null);
+
+  const [holdings, setHoldings] = useState([]);
+  const [holdingsQuotes, setHoldingsQuotes] = useState(null);
+  const [holdingsQuotesLoading, setHoldingsQuotesLoading] = useState(false);
+
+  useEffect(() => {
+    setHoldings(loadHoldings());
+  }, []);
+
+  useEffect(() => {
+    if (holdings.length === 0) {
+      setHoldingsQuotes(null);
+      return;
+    }
+    let cancelled = false;
+    async function poll() {
+      setHoldingsQuotesLoading(true);
+      try {
+        const tickers = holdings.map((h) => h.ticker).join(",");
+        const res = await fetch(`/api/quotes?tickers=${encodeURIComponent(tickers)}`);
+        const json = await res.json();
+        if (!cancelled) setHoldingsQuotes(json.quotes);
+      } catch (e) {
+        console.error(`holdings quotes fetch failed: ${e}`);
+      } finally {
+        if (!cancelled) setHoldingsQuotesLoading(false);
+      }
+    }
+    poll();
+    const id = setInterval(poll, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [holdings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,24 +150,45 @@ export default function Home() {
         <title>Live Portfolio Simulator</title>
       </Head>
       <Nav />
-      <main style={{ maxWidth: 820, margin: "0 auto", padding: "20px 16px 48px" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 650, margin: "0 0 4px" }}>My Portfolio</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "0 0 20px", maxWidth: "64ch" }}>
-          The curve is a real, walk-forward out-of-sample backtest ({data.equity_curve[0].date}{" "}
-          to {portfolio.as_of_date}) — see the methodology write-up for how it was built and validated. The{" "}
-          <b style={{ color: "var(--critical)" }}>LIVE</b> point extends it using real-time quotes applied against the
-          strategy&apos;s last-rebalanced weights, polled every 30s. Simulated money, not a real brokerage position —
-          this project never submits an order anywhere.
+      <main id="main-content" className="container">
+        <h1 className="page-title">My Portfolio</h1>
+        <p className="lede">
+          Your real positions, priced live from this browser&apos;s saved holdings — not a brokerage connection, and
+          nothing here ever places an order. The strategy backtest further down is reference material from this
+          project&apos;s research watchlist, shown for context, not your actual holdings.
         </p>
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-          <label style={{ fontSize: 13 }}>
-            Strategy{" "}
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6 }}
-            >
+        <Card style={{ marginBottom: 16 }}>
+          <HoldingsEditor
+            rows={holdings}
+            onChange={setHoldings}
+            quotes={holdingsQuotes}
+            quotesLoading={holdingsQuotesLoading}
+          />
+        </Card>
+
+        <h2 style={{ fontSize: 16, fontWeight: 650, margin: "32px 0 2px" }}>Forecast a new contribution</h2>
+        <p className="lede" style={{ marginTop: 4, marginBottom: 14 }}>
+          If you add money next month, does keeping today&apos;s split or re-optimizing it change the outcome enough
+          to matter?
+        </p>
+        <Card style={{ marginBottom: 32 }}>
+          <ForecastPanel holdings={holdings} />
+        </Card>
+
+        <h2 style={{ fontSize: 16, fontWeight: 650, margin: "0 0 2px" }}>Strategy backtest (reference)</h2>
+        <p className="lede" style={{ marginTop: 4 }}>
+          The curve is a real, walk-forward out-of-sample backtest ({data.equity_curve[0].date}{" "}
+          to {portfolio.as_of_date}) over this project&apos;s 12-name research watchlist — see the methodology
+          write-up for how it was built and validated. The <b className="down">LIVE</b> point extends it using
+          real-time quotes applied against the strategy&apos;s last-rebalanced weights, polled every 30s. Simulated
+          money against a fixed watchlist, not your holdings above.
+        </p>
+
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
+          <label className="field">
+            Strategy
+            <select className="select" value={method} onChange={(e) => setMethod(e.target.value)}>
               {Object.keys(METHOD_LABELS).map((m) => (
                 <option key={m} value={m}>
                   {METHOD_LABELS[m]}
@@ -137,101 +196,82 @@ export default function Home() {
               ))}
             </select>
           </label>
-          <label style={{ fontSize: 13 }}>
-            Initial investment{" "}
+          <label className="field">
+            Initial investment
             <input
+              className="input"
               type="number"
               min="100"
               step="100"
               value={amount}
               onChange={(e) => setAmount(Math.max(100, Number(e.target.value) || 0))}
-              style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, width: 110 }}
+              style={{ width: 130 }}
             />
           </label>
         </div>
 
-        <div
-          style={{
-            background: "var(--surface-1)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: "18px 20px",
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>Live value</div>
-          <div style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-            {liveValue != null
-              ? `$${liveValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : "loading…"}
-          </div>
-          {liveValue != null && (
-            <div style={{ fontSize: 13, color: dollarChange >= 0 ? "var(--good)" : "var(--critical)" }}>
-              {dollarChange >= 0 ? "+" : ""}
-              {dollarChange.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pctChangeSinceBacktest >= 0 ? "+" : ""}
-              {pctChangeSinceBacktest.toFixed(2)}% since {portfolio.as_of_date}) · total gain {totalGainPct >= 0 ? "+" : ""}
-              {totalGainPct.toFixed(1)}% since {data.equity_curve[0].date}
-            </div>
+        <Card style={{ marginBottom: 16 }}>
+          <div className="eyebrow">Live value</div>
+          {liveValue != null ? (
+            <>
+              <div className="hero-figure">
+                ${liveValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className={`${dollarChange >= 0 ? "up" : "down"}`} style={{ fontSize: 13.5, marginTop: 6 }}>
+                {dollarChange >= 0 ? "+" : ""}
+                {dollarChange.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pctChangeSinceBacktest >= 0 ? "+" : ""}
+                {pctChangeSinceBacktest.toFixed(2)}% since {portfolio.as_of_date}) · total gain {totalGainPct >= 0 ? "+" : ""}
+                {totalGainPct.toFixed(1)}% since {data.equity_curve[0].date}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="skeleton" style={{ width: 220, height: 40, marginTop: 4 }} />
+              <div className="skeleton" style={{ width: 300, height: 14, marginTop: 10 }} />
+            </>
           )}
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
+          <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 10 }}>
             {fetchedAt ? `Quotes as of ${new Date(fetchedAt).toLocaleTimeString()}` : "Fetching live quotes…"}
-            {error && <span style={{ color: "var(--critical)" }}> · some quotes unavailable</span>}
+            {error && <span className="down"> · some quotes unavailable</span>}
             {portfolio.source === "static" && (
               <span> · backtest from a cached snapshot (live recompute unavailable right now)</span>
             )}
           </div>
-        </div>
+        </Card>
 
-        <div
-          style={{
-            background: "var(--surface-1)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 20,
-          }}
-        >
+        <Card style={{ marginBottom: 16 }}>
           <EquityChart curve={scaledCurve} liveValue={liveValue} color={`var(--m-${method})`} />
-        </div>
+        </Card>
 
-        <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 16px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
-            <thead>
-              <tr style={{ color: "var(--muted)", textTransform: "uppercase", fontSize: 11 }}>
-                <th style={{ textAlign: "left", padding: "8px 4px" }}>Ticker</th>
-                <th style={{ textAlign: "right", padding: "8px 4px" }}>Weight</th>
-                <th style={{ textAlign: "right", padding: "8px 4px" }}>Live price</th>
-                <th style={{ textAlign: "right", padding: "8px 4px" }}>Day change</th>
-              </tr>
-            </thead>
-            <tbody>
-              {portfolio.tickers.map((t) => {
-                const q = quotes?.[t];
-                return (
-                  <tr key={t} style={{ borderTop: "1px solid var(--grid)" }}>
-                    <td style={{ padding: "8px 4px", fontWeight: 600 }}>{t}</td>
-                    <td style={{ padding: "8px 4px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                      {((data.final_weights[t] || 0) * 100).toFixed(1)}%
-                    </td>
-                    <td style={{ padding: "8px 4px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                      {q ? `$${q.price.toFixed(2)}` : "…"}
-                    </td>
-                    <td
-                      style={{
-                        padding: "8px 4px",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                        color: q && q.dayChangePct >= 0 ? "var(--good)" : "var(--critical)",
-                      }}
-                    >
-                      {q && q.dayChangePct != null ? `${q.dayChangePct >= 0 ? "+" : ""}${q.dayChangePct.toFixed(2)}%` : "…"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Card style={{ padding: "6px 16px" }}>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th className="num">Weight</th>
+                  <th className="num">Live price</th>
+                  <th className="num">Day change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portfolio.tickers.map((t) => {
+                  const q = quotes?.[t];
+                  return (
+                    <tr key={t}>
+                      <td style={{ fontWeight: 600 }}>{t}</td>
+                      <td className="num">{((data.final_weights[t] || 0) * 100).toFixed(1)}%</td>
+                      <td className="num">{q ? `$${q.price.toFixed(2)}` : "…"}</td>
+                      <td className={`num ${q && q.dayChangePct != null ? (q.dayChangePct >= 0 ? "up" : "down") : ""}`}>
+                        {q && q.dayChangePct != null ? `${q.dayChangePct >= 0 ? "+" : ""}${q.dayChangePct.toFixed(2)}%` : "…"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </main>
     </>
   );

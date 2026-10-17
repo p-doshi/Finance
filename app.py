@@ -24,6 +24,13 @@ GET /api/stock/{ticker}
     -> {ticker, as_of, price, day_change_pct, high_52w, low_52w, series}
        -- works for any ticker stockanalysis.com covers, not just the
        12-name watchlist above.
+POST /api/forecast {holdings: {ticker: shares}, add_amount, distributions,
+                     horizon_days}
+    -> {as_of, current_value, current_weights, total_initial, dates,
+        scenarios: {<distribution>: {weights, p10, p50, p90}}} -- a
+       block-bootstrap forward simulation (research.forecast), not a
+       backtest and not a prediction. See that module's docstring for what
+       it does and does not establish.
 
 Same TICKERS/RF/WINDOW/REBAL_EVERY/COST_BPS as scripts/export_web_data.py
 -- this is the live-fetching twin of that script, not a separate design.
@@ -43,12 +50,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Response
+from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from portfolio_pipeline.data.fetch import DataQualityError, fetch_raw, validate  # noqa: E402
 from portfolio_pipeline.data.universe import fetch_full_universe, screen  # noqa: E402
 from portfolio_pipeline.research.backtest import walk_forward  # noqa: E402
+from portfolio_pipeline.research.forecast import simulate_forward  # noqa: E402
 from portfolio_pipeline.research.hrp import hrp_weight  # noqa: E402
 from portfolio_pipeline.research.optimizers import (  # noqa: E402
     equal_weight,
@@ -76,6 +85,28 @@ METHODS = {
         trailing.cov().values * 252, trailing.mean().values * 252, RF
     ),
 }
+
+# Same optimizers as METHODS above, but parametrized by n (the holder's own
+# number of positions) instead of closing over the fixed 12-name TICKERS --
+# /api/forecast runs these against whatever tickers a visitor actually
+# holds, not the curated watchlist.
+FORECAST_METHOD_FNS = {
+    "equal_weight": lambda trailing, n: equal_weight(n),
+    "risk_parity": lambda trailing, n: risk_parity_weight(trailing.cov().values * 252),
+    "hrp": lambda trailing, n: hrp_weight(trailing.cov().values * 252),
+    "min_variance": lambda trailing, n: min_variance_weight(trailing.cov().values * 252),
+    "max_sharpe": lambda trailing, n: max_sharpe_weight(
+        trailing.cov().values * 252, trailing.mean().values * 252, RF
+    ),
+}
+
+
+class ForecastRequest(BaseModel):
+    holdings: dict[str, float]  # ticker -> shares (fractional allowed)
+    add_amount: float = 0.0
+    distributions: list[str] = ["same"]
+    horizon_days: int = 252
+
 
 app = FastAPI()
 
@@ -201,4 +232,99 @@ def stock_detail(ticker: str, range_: str = "1Y", response: Response = None):
         "high_52w": max(r.adj_close for r in window_1y),
         "low_52w": min(r.adj_close for r in window_1y),
         "series": [{"date": r.date, "close": r.adj_close, "volume": r.volume} for r in rows],
+    }
+
+
+@app.post("/api/forecast")
+def forecast(req: ForecastRequest):
+    if not req.holdings:
+        raise HTTPException(status_code=400, detail="holdings must include at least one position")
+    tickers = [t.upper() for t in req.holdings]
+    for t in tickers:
+        if not _TICKER_RE.match(t):
+            raise HTTPException(status_code=400, detail=f"invalid ticker format: {t}")
+    shares = {t.upper(): s for t, s in req.holdings.items()}
+    if any(s < 0 for s in shares.values()):
+        raise HTTPException(status_code=400, detail="share counts must be >= 0")
+    if req.add_amount < 0:
+        raise HTTPException(status_code=400, detail="add_amount must be >= 0")
+    if not (5 <= req.horizon_days <= 756):
+        raise HTTPException(status_code=400, detail="horizon_days must be between 5 and 756 (3 trading years)")
+    bad = [d for d in req.distributions if d != "same" and d not in FORECAST_METHOD_FNS]
+    if bad:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown distribution(s) {bad}; choose from ['same', {list(FORECAST_METHOD_FNS)}]",
+        )
+
+    series, latest_price = {}, {}
+    try:
+        for t in tickers:
+            payload = fetch_raw(t, range_="2Y", period="Daily")
+            # min_rows relaxed vs. the curated watchlist's 200-day default --
+            # this serves whatever a visitor actually holds, which may
+            # include recent listings; max_single_day_move relaxed for the
+            # same reason /api/stock/{ticker} relaxes it.
+            rows = validate(t, payload, min_rows=60, max_single_day_move=0.95)
+            s = pd.Series({r.date: r.adj_close for r in rows}, name=t)
+            s.index = pd.to_datetime(s.index)
+            series[t] = s.sort_index()
+            latest_price[t] = float(series[t].iloc[-1])
+    except DataQualityError as e:
+        raise HTTPException(status_code=502, detail=f"price data fetch failed: {e}") from e
+
+    prices = pd.DataFrame(series).dropna(how="any")
+    if len(prices) < 60:
+        raise HTTPException(
+            status_code=422,
+            detail="not enough overlapping price history across these tickers to forecast (need 60+ trading days)",
+        )
+    log_ret = np.log(prices / prices.shift(1)).dropna()
+
+    current_value = sum(shares[t] * latest_price[t] for t in tickers)
+    if current_value <= 0:
+        raise HTTPException(
+            status_code=400, detail="current holdings value must be > 0 -- enter at least one position with shares > 0"
+        )
+    current_weights = {t: shares[t] * latest_price[t] / current_value for t in tickers}
+    total_initial = current_value + req.add_amount
+
+    last_date = prices.index[-1]
+    future_dates = pd.bdate_range(start=last_date, periods=req.horizon_days + 1)[1:]
+
+    n = len(tickers)
+    scenarios = {}
+    for dist in req.distributions:
+        if dist == "same":
+            weights = dict(current_weights)
+        else:
+            w = FORECAST_METHOD_FNS[dist](log_ret[tickers], n)
+            weights = dict(zip(tickers, (float(x) for x in w)))
+        w_series = pd.Series(weights).reindex(tickers).fillna(0.0)
+        portfolio_daily_ret = log_ret[tickers].dot(w_series)
+        try:
+            result = simulate_forward(
+                portfolio_daily_ret, initial_value=total_initial, horizon_days=req.horizon_days, n_sims=2000, seed=0
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        scenarios[dist] = {
+            "weights": {t: round(weights[t], 6) for t in tickers},
+            "p10": [round(float(v), 2) for v in result.p10],
+            "p50": [round(float(v), 2) for v in result.p50],
+            "p90": [round(float(v), 2) for v in result.p90],
+        }
+
+    return {
+        "as_of": str(last_date.date()),
+        "tickers": tickers,
+        "current_value": round(current_value, 2),
+        "current_weights": {t: round(current_weights[t], 6) for t in tickers},
+        "add_amount": req.add_amount,
+        "total_initial": round(total_initial, 2),
+        "horizon_days": req.horizon_days,
+        "dates": [str(d.date()) for d in future_dates],
+        "n_sims": 2000,
+        "block_size": 5,
+        "scenarios": scenarios,
     }

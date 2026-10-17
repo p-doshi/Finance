@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import Nav from "../../components/Nav";
 import PriceChart from "../../components/PriceChart";
+import Card from "../../components/Card";
 
 const RANGES = ["3M", "1Y", "5Y"];
 
@@ -37,21 +38,21 @@ export default function StockDetail() {
         <title>{ticker ? `${ticker} — Live Portfolio Simulator` : "Stock — Live Portfolio Simulator"}</title>
       </Head>
       <Nav />
-      <main style={{ maxWidth: 820, margin: "0 auto", padding: "20px 16px 48px" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 650, margin: "0 0 4px" }}>{ticker}</h1>
+      <main id="main-content" className="container">
+        <h1 className="page-title" style={{ fontSize: 24 }}>{ticker}</h1>
 
         {error && (
-          <div style={{ color: "var(--critical)", fontSize: 13, margin: "8px 0" }}>
+          <div className="down" style={{ fontSize: 13, margin: "10px 0" }}>
             Couldn&apos;t load {ticker}: {error}
           </div>
         )}
 
         {data && (
           <>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, margin: "4px 0 16px" }}>
-              <span style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>${data.price.toFixed(2)}</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, margin: "10px 0 18px" }}>
+              <span className="hero-figure" style={{ fontSize: 32 }}>${data.price.toFixed(2)}</span>
               {data.day_change_pct != null && (
-                <span style={{ fontSize: 15, color: data.day_change_pct >= 0 ? "var(--good)" : "var(--critical)" }}>
+                <span className={data.day_change_pct >= 0 ? "up" : "down"} style={{ fontSize: 15, fontWeight: 600 }}>
                   {data.day_change_pct >= 0 ? "+" : ""}
                   {data.day_change_pct.toFixed(2)}%
                 </span>
@@ -59,44 +60,41 @@ export default function StockDetail() {
               <span style={{ fontSize: 12, color: "var(--muted)" }}>as of {data.as_of}</span>
             </div>
 
-            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
               {RANGES.map((r) => (
                 <button
                   key={r}
+                  className={`btn${r === range ? " active" : ""}`}
                   onClick={() => setRange(r)}
-                  style={{
-                    fontSize: 12,
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    border: "1px solid var(--border)",
-                    background: r === range ? "var(--text-primary)" : "var(--surface-1)",
-                    color: r === range ? "var(--surface-1)" : "var(--text-primary)",
-                    cursor: "pointer",
-                  }}
                 >
                   {r}
                 </button>
               ))}
             </div>
 
-            <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <Card style={{ marginBottom: 18 }}>
               <PriceChart series={data.series} color="auto" />
-            </div>
+            </Card>
 
-            <div style={{ display: "flex", gap: 24, fontSize: 13 }}>
+            <div style={{ display: "flex", gap: 28, fontSize: 13 }}>
               <div>
-                <div style={{ color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>52-week low</div>
-                <div style={{ fontVariantNumeric: "tabular-nums" }}>${data.low_52w.toFixed(2)}</div>
+                <div className="eyebrow">52-week low</div>
+                <div style={{ fontVariantNumeric: "tabular-nums", marginTop: 2 }}>${data.low_52w.toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ color: "var(--muted)", fontSize: 11, textTransform: "uppercase" }}>52-week high</div>
-                <div style={{ fontVariantNumeric: "tabular-nums" }}>${data.high_52w.toFixed(2)}</div>
+                <div className="eyebrow">52-week high</div>
+                <div style={{ fontVariantNumeric: "tabular-nums", marginTop: 2 }}>${data.high_52w.toFixed(2)}</div>
               </div>
             </div>
           </>
         )}
 
-        {!data && !error && <p style={{ color: "var(--muted)", fontSize: 13 }}>Loading…</p>}
+        {!data && !error && (
+          <div style={{ marginTop: 10 }}>
+            <div className="skeleton" style={{ width: 160, height: 38, marginBottom: 18 }} />
+            <div className="skeleton" style={{ width: "100%", height: 280, borderRadius: 14 }} />
+          </div>
+        )}
       </main>
     </>
   );
