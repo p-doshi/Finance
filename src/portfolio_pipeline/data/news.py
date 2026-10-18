@@ -50,6 +50,23 @@ from xml.etree import ElementTree
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 USER_AGENT = "portfolio-pipeline/0.1 (personal research use)"
+# SEC's fair-access policy (sec.gov/os/webmaster-faq#developers) asks for a
+# descriptive User-Agent naming the app and a contact address, specifically
+# for its own endpoints -- used only for the two sec.gov calls below, not
+# the other sources. Checked directly during development: repeated test
+# calls (ticker-map + submissions, several times over a few minutes, from
+# more than one IP while verifying this feature) started returning 403
+# partway through, consistent with SEC's stated rate limiting rather than
+# a one-off bug -- the two calls this module makes per request (one ticker
+# lookup, one submissions fetch) are within their documented limits for
+# any one real user, but are worth being honest about: this source can
+# fail under heavier or clustered load, which is exactly why it's wrapped
+# the same as the other two and reported in source_errors rather than
+# allowed to take the whole response down.
+# Using the project's real public repo as the contact point rather than a
+# fabricated email address -- SEC's policy wants something that actually
+# identifies the requester, and a made-up "contact@example.com" wouldn't.
+SEC_USER_AGENT = "portfolio-pipeline research project (https://github.com/p-doshi/Finance)"
 
 # See module docstring: corrects demonstrated misclassifications in
 # VADER's general-purpose lexicon on financial headline phrasing.
@@ -173,8 +190,8 @@ def parse_sec_filings(submissions: dict, forms: tuple[str, ...], start_date: str
 # ---- Fetching (network + parsing) ----
 
 
-def _get(url: str, timeout: float) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+def _get(url: str, timeout: float, user_agent: str = USER_AGENT) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": user_agent})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8")
 
@@ -205,7 +222,7 @@ def fetch_sec_filings(
     end_date: str | None = None,
     timeout: float = 15.0,
 ) -> list[NewsItem]:
-    ticker_map_raw = _get(SEC_TICKER_MAP_URL, timeout)
+    ticker_map_raw = _get(SEC_TICKER_MAP_URL, timeout, user_agent=SEC_USER_AGENT)
     ticker_map = json.loads(ticker_map_raw)
     cik = None
     for row in ticker_map.values():
@@ -214,7 +231,7 @@ def fetch_sec_filings(
             break
     if cik is None:
         return []
-    submissions = json.loads(_get(SEC_SUBMISSIONS_URL.format(cik=cik), timeout))
+    submissions = json.loads(_get(SEC_SUBMISSIONS_URL.format(cik=cik), timeout, user_agent=SEC_USER_AGENT))
     return parse_sec_filings(submissions, forms, start_date, end_date)
 
 
