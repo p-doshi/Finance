@@ -1,60 +1,36 @@
-// Per-ticker news, from Yahoo Finance's long-standing public RSS feed --
-// same vendor already used for quotes/FX in this project, no API key, no
-// Cloudflare challenge (unlike a couple of stockanalysis.com paths tried
-// and rejected during research for this feature). Hand-rolled RSS
-// extraction rather than pulling in an XML parser dependency: the feed's
-// <item> shape is simple and stable, and this project already avoids
-// dependencies where a short, tested parser does the job (see
-// EquityChart.js/PriceChart.js on not using a charting library).
+// Proxies to the "app" service's GET /api/news/{ticker}. See
+// pages/api/portfolio.js for why this goes through a server-side route.
 //
-// Cached at the edge for 15 minutes -- headlines don't need to be fresher
-// than that for this use, and it keeps a popular ticker from hammering
-// Yahoo on every visitor's page load.
-
-const TICKER_RE = /^[A-Za-z0-9.-]{1,10}$/;
-const MAX_ITEMS = 8;
-
-function decodeEntities(s) {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-}
-
-function extractTag(block, tag) {
-  const m = block.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
-  return m ? decodeEntities(m[1]).trim() : null;
-}
-
-function parseRssItems(xml) {
-  const items = [];
-  const blocks = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-  for (const block of blocks.slice(0, MAX_ITEMS)) {
-    const title = extractTag(block, "title");
-    const link = extractTag(block, "link");
-    const pubDate = extractTag(block, "pubDate");
-    if (title && link) items.push({ title, link, pubDate });
-  }
-  return items;
-}
+// This used to be a standalone Yahoo-RSS-only fetch+parse implemented
+// entirely here in JS. It's now a thin proxy: the real work (three
+// independent sources, date-range filtering, sentiment scoring) moved to
+// Python (data/news.py) once it needed VADER, which has no equivalent
+// here without adding an npm dependency this project doesn't otherwise
+// need.
 
 export default async function handler(req, res) {
-  const ticker = typeof req.query.ticker === "string" ? req.query.ticker.toUpperCase() : "";
-  if (!TICKER_RE.test(ticker)) {
-    res.status(400).json({ error: "invalid ticker format" });
+  const ticker = typeof req.query.ticker === "string" ? req.query.ticker : "";
+  const appUrl = process.env.APP_URL;
+  if (!appUrl) {
+    res.status(503).json({ error: "APP_URL not configured (local dev without the Python service running?)" });
     return;
   }
   try {
-    const url = `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(ticker)}&region=US&lang=en-US`;
-    const upstream = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!upstream.ok) throw new Error(`feed returned ${upstream.status}`);
-    const xml = await upstream.text();
-    const items = parseRssItems(xml);
+    const params = new URLSearchParams();
+    for (const key of ["start_date", "end_date", "limit"]) {
+      if (req.query[key]) params.set(key, req.query[key]);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const upstream = await fetch(`${appUrl}/api/news/${encodeURIComponent(ticker)}${qs}`, {
+      signal: AbortSignal.timeout(25_000),
+    });
+    const json = await upstream.json();
+    if (!upstream.ok) {
+      res.status(upstream.status).json(json);
+      return;
+    }
     res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=3600");
-    res.status(200).json({ ticker, items });
+    res.status(200).json(json);
   } catch (e) {
     console.error(`news fetch failed for ${ticker}: ${e}`);
     res.status(502).json({ error: String(e) });

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import Nav from "../../components/Nav";
 import PriceChart from "../../components/PriceChart";
 import Card from "../../components/Card";
+import NewsList from "../../components/NewsList";
 
 const RANGES = ["3M", "1Y", "5Y"];
 
@@ -146,28 +147,15 @@ export default function StockDetail() {
               </Card>
             )}
 
-            <h2 style={{ fontSize: 15, fontWeight: 650, margin: "0 0 10px" }}>Recent news</h2>
+            <h2 style={{ fontSize: 15, fontWeight: 650, margin: "0 0 2px" }}>Recent news</h2>
+            <p style={{ fontSize: 11.5, color: "var(--muted)", margin: "0 0 10px" }}>
+              Yahoo, Google News, and SEC EDGAR filings — sentiment is computed locally (VADER plus a small
+              finance-specific patch), a rough directional signal, not a trading input.
+            </p>
             {news ? (
-              news.length > 0 ? (
-                <Card className="reveal" style={{ padding: "4px 16px" }}>
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                    {news.map((item, i) => (
-                      <li key={item.link} style={{ padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid var(--grid)" }}>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: "none" }}>
-                          {item.title}
-                        </a>
-                        {item.pubDate && (
-                          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                            {new Date(item.pubDate).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              ) : (
-                <p style={{ fontSize: 13, color: "var(--muted)" }}>No recent headlines found for {ticker}.</p>
-              )
+              <Card className="reveal" style={{ padding: news.length > 0 ? "4px 16px" : "16px" }}>
+                <NewsList items={news} emptyLabel={`No recent headlines found for ${ticker}.`} />
+              </Card>
             ) : (
               <Card>
                 <div className="skeleton" style={{ height: 18, marginBottom: 10 }} />

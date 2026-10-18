@@ -9,6 +9,7 @@ dependencies = [
     "pandas>=2.0",
     "scikit-learn>=1.5",
     "fastapi>=0.117",
+    "vaderSentiment>=3.3.2",
 ]
 
 [project.optional-dependencies]

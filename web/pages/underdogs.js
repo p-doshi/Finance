@@ -61,7 +61,15 @@ function TopPickNews({ ticker }) {
   return (
     <ul style={{ listStyle: "none", margin: "2px 0 10px 26px", padding: 0 }}>
       {news.slice(0, MAX_NEWS).map((item) => (
-        <li key={item.link} style={{ marginTop: 3 }}>
+        <li key={item.link} style={{ marginTop: 3, display: "flex", gap: 6, alignItems: "baseline" }}>
+          {item.sentiment_label && (
+            <span
+              className={item.sentiment_label === "positive" ? "up" : item.sentiment_label === "negative" ? "down" : ""}
+              style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", flexShrink: 0 }}
+            >
+              {item.sentiment_label === "neutral" ? "·" : item.sentiment_label === "positive" ? "+" : "−"}
+            </span>
+          )}
           <a
             href={item.link}
             target="_blank"

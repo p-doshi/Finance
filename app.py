@@ -24,6 +24,13 @@ GET /api/stock/{ticker}
     -> {ticker, as_of, price, day_change_pct, high_52w, low_52w, series}
        -- works for any ticker stockanalysis.com covers, not just the
        12-name watchlist above.
+GET /api/news/{ticker}?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&limit=20
+    -> {source_errors, items: [{title, link, source, published_at,
+        sentiment_compound, sentiment_label}]} -- three independent free
+       sources (data.news.get_news): Yahoo RSS, Google News RSS (real
+       historical search), SEC EDGAR (official per-company 8-K history).
+       Sentiment is computed locally (VADER + a finance lexicon patch),
+       not a vendor score -- see data/news.py's module docstring.
 POST /api/forecast {holdings: {ticker: shares}, add_amount, distributions,
                      horizon_days}
     -> {as_of, current_value, current_weights, total_initial, dates,
@@ -73,6 +80,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from portfolio_pipeline.data.fetch import DataQualityError, fetch_raw, validate  # noqa: E402
+from portfolio_pipeline.data.news import get_news, news_item_to_dict  # noqa: E402
 from portfolio_pipeline.data.universe import fetch_full_universe, screen  # noqa: E402
 from portfolio_pipeline.decision.trade_ticket import current_weights as ticket_current_weights  # noqa: E402
 from portfolio_pipeline.decision.trade_ticket import generate_trade_ticket  # noqa: E402
@@ -350,6 +358,41 @@ def underdogs(
             }
             for r in valued[:limit]
         ],
+    }
+
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+@app.get("/api/news/{ticker}")
+def news(ticker: str, start_date: str | None = None, end_date: str | None = None, limit: int = 20, response: Response = None):
+    """Three independent sources (data.news.get_news): Yahoo RSS, Google
+    News RSS (real date-range search via after:/before:), SEC EDGAR
+    (official per-company 8-K history). Each gets a locally-computed
+    sentiment score -- see data/news.py's module docstring on why that's
+    VADER plus a small finance-specific lexicon patch, not a vendor score
+    or a trained model."""
+    ticker = ticker.upper()
+    if not _TICKER_RE.match(ticker):
+        raise HTTPException(status_code=400, detail="invalid ticker format")
+    for label, d in (("start_date", start_date), ("end_date", end_date)):
+        if d is not None and not _DATE_RE.match(d):
+            raise HTTPException(status_code=400, detail=f"{label} must be YYYY-MM-DD")
+    if not (1 <= limit <= 50):
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 50")
+
+    items, errors = get_news(ticker, start_date=start_date, end_date=end_date, limit=limit)
+
+    if response is not None:
+        response.headers["Cache-Control"] = "s-maxage=900, stale-while-revalidate=3600"
+
+    return {
+        "ticker": ticker,
+        "start_date": start_date,
+        "end_date": end_date,
+        "sources_queried": ["yahoo", "google_news", "sec_edgar"],
+        "source_errors": errors,
+        "items": [news_item_to_dict(it) for it in items],
     }
 
 
